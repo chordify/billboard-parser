@@ -21,7 +21,7 @@ module Main (main) where
 import Billboard.BillboardData ( BBChord (..), getBBChords
                                , BillboardData(..), getTitle, showInMIREXFormat)
 import Billboard.BillboardParser ( parseBillboard )
--- import Billboard.Tests (mainTest, dirTest)
+import Billboard.Tests (mainTestFile, mainTestDir)
 
 -- harmtrace imports
 import HarmTrace.Audio.ChordTypes (TimedData (..))

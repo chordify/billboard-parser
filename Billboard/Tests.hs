@@ -1,15 +1,20 @@
-module Billboard.Tests (mainTest, dirTest) where
+module Billboard.Tests (mainTestFile, mainTestDir) where
 
 import Test.HUnit
 import Control.Monad (void)
+import Data.List (genericLength)
 
-import HarmTrace.Audio.ChordTypes (TimedData, getData)
+import HarmTrace.Audio.ChordTypes (TimedData, onset, offset, Timed)
 
 import Billboard.BillboardParser (parseBillboard)
 import Billboard.BillboardData (BillboardData (..), BBChord (..))
 
-applyTestToList :: (String -> Test) -> [String] -> Test
-applyTestToList t fps = TestList (map t fps)
+-- constants
+acceptableBeatDeviationMultiplier :: Double
+acceptableBeatDeviationMultiplier = 0.5
+
+-- applyTestToList :: (String -> Test) -> [String] -> Test
+-- applyTestToList t fps = TestList (map t fps)
 
 -- oneChordTimedList :: String -> Test
 -- oneChordTimedList = 
@@ -17,6 +22,27 @@ applyTestToList t fps = TestList (map t fps)
            -- . and . map oneChord . getSong . fst . parseBillboard 
     -- where oneChord :: TimedData BBChord -> Bool
           -- oneChord = allSame . getData
+
+oddBeatLength :: BillboardData -> Test
+oddBeatLength bbd = 
+  let song   = getSong bbd
+      avgLen = (sum $ map beatDuration song) / (genericLength song)
+      minLen = avgLen *  acceptableBeatDeviationMultiplier
+      maxLen = avgLen * (acceptableBeatDeviationMultiplier + 1)
+  in TestCase (assertBool ("odd Beat length detected for " ++ getTitle bbd)
+              (and . map (rangeCheck minLen maxLen) $ song))
+                   
+isInRange :: Double -> Double -> TimedData BBChord -> Test
+isInRange minLen maxLen t = 
+  TestCase (assertBool  ("odd Beat length detected for " ++ show t) 
+                        (rangeCheck minLen maxLen t))
+           
+rangeCheck :: Double -> Double -> TimedData a -> Bool
+rangeCheck minLen maxLen t = let len = beatDuration t 
+                             in  len >= minLen && len <= maxLen
+
+beatDuration :: Timed t => t a -> Double
+beatDuration t = offset t - onset t
           
 -- oneChordTimedListVerbose :: String -> Test
 -- oneChordTimedListVerbose = 
@@ -26,14 +52,17 @@ applyTestToList t fps = TestList (map t fps)
             -- (show c ++ " contains more then one chord in chord list" )
             -- (allSame $ getData c)
             
-allSame :: [BBChord] -> Bool  
-allSame (c:cs) = null $ dropWhile ((== chord c) . chord) cs
-        
-mainTest :: FilePath -> IO ()
-mainTest fp = return () -- readFile fp >>= void . runTestTT . oneChordTimedListVerbose
+-- allSame :: [BBChord] -> Bool  
+-- allSame (c:cs) = null $ dropWhile ((== chord c) . chord) cs
 
-dirTest :: [FilePath] -> IO ()
-dirTest fps = return ()
+-- testing one File
+mainTestFile :: FilePath -> IO ()
+mainTestFile fp = return ()
+
+-- testing a directory of files
+mainTestDir :: FilePath -> IO ()
+mainTestDir fp = readFile fp >>= void . runTestTT . oddBeatLength 
+                                                  . fst . parseBillboard
               -- do cs <- mapM readFile fps 
                  -- void . runTestTT $ applyTestToList oneChordTimedList cs
   -- f fp = readFile fp >>= void . runTest . oneChordTimedListVerbose
