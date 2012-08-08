@@ -1,5 +1,22 @@
 {-# OPTIONS_GHC -Wall #-}
-module Billboard.BillboardData ( BBChord (..), isChange, hasBoundaries
+--------------------------------------------------------------------------------
+-- |
+-- Module      :  Billboard.BillboardData
+-- Copyright   :  (c) 2012 Universiteit Utrecht
+-- License     :  GPL3
+--
+-- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- Summary: A set of datatypes for representing Billboard chord sequence data 
+-- See: John Ashley Burgoyne, Jonathan Wild, Ichiro Fujinaga, 
+-- /An Expert Ground-Truth Set for Audio Chord Recognition and Music Analysis/,
+-- In: Proceedings of International Conference on Music Information Retrieval,
+-- 2011. (<http://ismir2011.ismir.net/papers/OS8-1.pdf>) 
+--------------------------------------------------------------------------------
+
+module Billboard.BillboardData ( BBChord (..), isChange, hasAnnotations
                                , isStructSegStart, isNoneBBChord, noneBBChord
                                , BillboardData (..), Artist, Title, Meta (..)
                                , getBBChords, filterNoneChords
@@ -15,7 +32,9 @@ import Billboard.Annotation ( Annotation (..), isStart, isStruct, getLabel )
 
 import Data.List (partition)
 
-data BillboardData = BillboardData { getTitle   :: Title
+-- | The 'BillboardData' datatype stores all information that has been extracted
+-- from a Billboard chord annotation
+data BillboardData = BillboardData { getTitle   :: Title    
                                    , getArtist  :: Artist 
                                    , getTimeSig :: TimeSig 
                                    , getKeyRoot :: Root    
@@ -62,17 +81,18 @@ instance Eq BBChord where
 --------------------------------------------------------------------------------
 -- Some BBChord Utilities
 --------------------------------------------------------------------------------
-
+-- | A chord label with no root, shorthand or other information to represent
+-- a none harmonic sections
 noneBBChord :: BBChord
 noneBBChord = BBChord [] Change noneLabel {duration =1}
 
--- Returns True if the 'BBChord' represents a strating point of a stuctural
+-- | Returns True if the 'BBChord' represents a strating point of a stuctural
 -- segement
 isStructSegStart :: BBChord -> Bool-- look for segTypes that are Start and Struct
 isStructSegStart = not . null . filter isStruct . map getLabel 
                               . filter isStart  . annotations 
 
--- Returns True if the 'BBChord' represents a chord Change (must be set 
+-- | Returns True if the 'BBChord' represents a chord Change (must be set 
 -- beforehand, only the 'BeatWeight' stored in the BBChord is examined)
 isChange :: BBChord -> Bool
 isChange c = case weight c of
@@ -80,19 +100,18 @@ isChange c = case weight c of
   UnAligned -> error "BBChord.isChange: the BBChord is not beat aligned"
   _         -> False
 
--- filters chords that have not annotated root or shorthand
+-- | Filters chords that have not annotated root or shorthand
 filterNoneChords :: [BBChord] -> [BBChord]
 filterNoneChords = filter (not . isNoneBBChord)
   
--- Returns True if the 'BBChord' is a 'noneBBChord', i.e. has not root note 
+-- | Returns True if the 'BBChord' is a 'noneBBChord', i.e. has not root note 
 -- and no shorthand
 isNoneBBChord :: BBChord -> Bool
 isNoneBBChord = isNoneChord . chord
   
--- Returns True if the 'BBChord' has any 'Boundary's and false otherwise
--- TODO rename to hasAnnotations
-hasBoundaries :: BBChord -> Bool
-hasBoundaries = not . null . annotations
+-- | Returns True if the 'BBChord' has any 'Boundary's and false otherwise
+hasAnnotations :: BBChord -> Bool
+hasAnnotations = not . null . annotations
 
 -- | Strips the time stamps from BillBoardData and concatnates all 'BBChords',
 -- it also removes all NoneChords

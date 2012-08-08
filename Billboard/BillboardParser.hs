@@ -291,12 +291,6 @@ pChordLines ts =  (interp . setTiming . lefts)
       let -- gbc = groupByChord dat
           bt  = (off - on) / genericLength dat
       in  zipWith3 TimedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
-   
-   -- groups an list of 'BBChords' into sublists that only contain the same chord.
-    -- groupByChord :: [BBChord] -> [[BBChord]]
-    -- groupByChord [] = []
-    -- groupByChord (c:cs) = let (sameC, rest) = span ((== chord c) . chord) cs
-                          -- in  (c : sameC) : groupByChord rest
 
 -- setBeatIx :: [TimedData [BBChord]] -> [TimedData [BBChord]]
 -- setBeatIx tcs = start : zipWith setIx [0, getNrOfBeats ts, ..] (reverse rest) ++ [end] where

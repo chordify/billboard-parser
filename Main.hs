@@ -1,4 +1,21 @@
 {-# OPTIONS_GHC -Wall #-}
+--------------------------------------------------------------------------------
+-- |
+-- Module      :  Main
+-- Copyright   :  (c) 2012 Universiteit Utrecht
+-- License     :  GPL3
+--
+-- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- Summary: The Commandline interface for parsing Billboard data. See:
+-- John Ashley Burgoyne, Jonathan Wild, Ichiro Fujinaga, 
+-- /An Expert Ground-Truth Set for Audio Chord Recognition and Music Analysis/,
+-- In: Proceedings of International Conference on Music Information Retrieval,
+-- 2011. (<http://ismir2011.ismir.net/papers/OS8-1.pdf>) 
+--------------------------------------------------------------------------------
+
 module Main (main) where
 
 import Billboard.BillboardData ( BBChord (..), getBBChords
