@@ -103,5 +103,5 @@ getBBChords = map getData . getSong
 showInMIREXFormat :: BillboardData -> String
 showInMIREXFormat = concatMap showMIREX . getSong where
   showMIREX :: TimedData BBChord ->  String
-  showMIREX c = show (onset c) ++ ' ' : show (offset c) 
-                               ++ ' ' : (show . chord . getData $ c) ++ "\n"
+  showMIREX c = show (onset c) ++ '\t' : show (offset c) 
+                               ++ '\t' : (show . chord . getData $ c) ++ "\n"
