@@ -1,24 +1,37 @@
 {-# OPTIONS_GHC -Wall #-}
+--------------------------------------------------------------------------------
+-- |
+-- Module      :  Billboard.BillboardParser
+-- Copyright   :  (c) 2012 Universiteit Utrecht
+-- License     :  GPL3
+--
+-- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- Summary: Billboard files can contain a variety of annoatations. This module
+-- aims at representing these as Haskell types
+--------------------------------------------------------------------------------
 
 module Billboard.Annotation ( Annotation (..), Label (..), isStruct
                 , isStart, Instrument (..), Description (..)
                 ,  isUnknown, getLabel, isRepeat, getRepeats) where
 
 import HarmTrace.Base.MusicRep (Root)
--- import Data.List (sortBy, groupBy)
--- import Data.Function  (on)
 
+-- | an 'Annotation' occurs either at the start or at the end of a chord 
+-- sequence line.
 data Annotation = Start Label | End Label  deriving Eq
 
 instance Show Annotation where
   show (Start l) = '<' : show l  
   show (End   l) = show l ++ ">"  
-  -- show StartEnd = "><" 
 
-data Label = Struct     Char Int    -- denoting A .. Z and a nr of primes (')
-           | Instr      Instrument
+-- | All annotations contain information we term 'Label'
+data Label = Struct     Char Int   -- ^ denoting A .. Z and the nr of primes (')
+           | Instr      Instrument 
            | Anno       Description
-           | Modulation Root
+           | Modulation Root 
        deriving Eq
 
 instance Show Label where
@@ -27,6 +40,7 @@ instance Show Label where
   show (Modulation lab) = show lab
   show (Struct     c i) = c : replicate i '\''
 
+-- | Representing musical instruments
 data Instrument = Guitar | Voice | Violin   | Banjo | Synthesizer | Saxophone
                 | Flute  | Drums | Trumpet  | Piano | Harmonica   | Organ 
                 | Keyboard       | Trombone | Electricsitar   | Pennywhistle 
@@ -34,41 +48,43 @@ data Instrument = Guitar | Voice | Violin   | Banjo | Synthesizer | Saxophone
                 | Electricguitar | Tenorhorn | Percussion | Rhythmguitar 
                 | Hammondorgan   | Harpsichord | Cello    | Acousticguitar
                 | Bassguitar     | Strings   | SteelDrum  | Vibraphone | Bongos
-                | Steelguitar    | UnknownInstr String
+                | Steelguitar    
+                | UnknownInstr String -- ^ a catch all description for 
+                                      -- unrecognised instruments
        deriving (Show, Eq)
        
+-- | Representing typical structural segementation labels
 data Description = Chorus  | Intro | Outro | Bridge  | Interlude | Solo
                  | Fadeout | Fadein | Prechorus | Maintheme   | Keychange 
                  | Secondarytheme   | Ending    | PhraseTrans | Instrumental 
                  | Coda    | Transistion | PreVerse   |Vocal  | Talking
                  | Repeat Int
                  | Verse  (Maybe Int)
-                 | UnknownAnno String
+                 | UnknownAnno String -- ^ a catch all description for 
+                                      -- unrecognised descriptions
        deriving (Show, Eq)
-       
- 
--- showIntGTone :: Int -> String
--- showIntGTone i = if i > 1 then show i else ""
 
--- addBr :: String -> Int -> String
--- addBr s i = if i > 1 then "\n" ++ s else ""
 
 --------------------------------------------------------------------------------
 -- Boundary Utilities
 --------------------------------------------------------------------------------
 
+-- | Returns the 'Label' of an 'Annotation'
 getLabel :: Annotation -> Label
 getLabel (Start l) = l
 getLabel (End   l) = l
 
+-- | Returns True if the 'Annotation' occurs at the start of a line
 isStart :: Annotation -> Bool
 isStart (Start _) = True
 isStart (End   _) = False
 
+-- | Returns True if the 'Annotation' annotates a structural segmentation label
 isStruct :: Label -> Bool
 isStruct (Struct _ _) = True
 isStruct _            = False
 
+-- | Returns True if the 'Annotation' 
 isUnknown :: Annotation -> Bool
 isUnknown s = case (getLabel s) of 
   (Instr (UnknownInstr _ )) -> True

@@ -41,13 +41,17 @@ data BillboardData = BillboardData { getTitle   :: Title
                                    , getSong    :: [TimedData BBChord]
                                    } deriving Show
 
+-- | Represents the artits of the piece
 type Artist = String 
+-- | Represents the title of the piece
 type Title  = String  
+-- | Represents other metadata of the piece, i.e. the time signature 
+-- and key root
 data Meta   = Metre   TimeSig 
             | KeyRoot Root    deriving Show
 
 
--- | We rap the 'HarmTrace.Base.MusicRep.Chord' datatype into a 'BBChord' type, 
+-- | We wrap the 'HarmTrace.Base.MusicRep.Chord' datatype into a 'BBChord' type, 
 -- so that we can augment it with 'Annotation's and 'BeatWeight's.
 data BBChord = BBChord { annotations :: [Annotation]
                        , weight      :: BeatWeight

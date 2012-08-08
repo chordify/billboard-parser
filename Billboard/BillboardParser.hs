@@ -34,14 +34,14 @@ import Billboard.BillboardData
 import Billboard.Annotation (  Annotation (..), Label (..)
                             , Instrument (..), Description (..), isStart
                             , isRepeat, getRepeats)
-
-testshort :: IO()
-testshort =  do let c = "205.132630385\tD, interlude, | G:maj | G:maj | G:maj | G:maj |"
-                    (s, err) = parseDataWithErrors (show <$> pChordLine (TimeSig (4,4))) c
-                    -- (s, err) = parseDataWithErrors (show <$> pSilenceEndLine) c
-                print c
-                mapM_ print err
-                print s
+-- debugging single lines
+-- testshort :: IO()
+-- testshort =  do let c = "205.132630385\tD, interlude, | G:maj | G:maj | G:maj | G:maj |"
+                    -- (s, err) = parseDataWithErrors (show <$> pChordLine (TimeSig (4,4))) c
+                    -- -- (s, err) = parseDataWithErrors (show <$> pSilenceEndLine) c
+                -- print c
+                -- mapM_ print err
+                -- print s
                 
 --------------------------------------------------------------------------------
 -- Top level Billboard parsers

@@ -1,3 +1,17 @@
+--------------------------------------------------------------------------------
+-- |
+-- Module      :  Billboard.BillboardParser
+-- Copyright   :  (c) 2012 Universiteit Utrecht
+-- License     :  GPL3
+--
+-- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- Summary: Modelling musical time (in a minimalistic way) with beats, bars
+-- and time signatures.
+--------------------------------------------------------------------------------
+
 module Billboard.BeatBar (TimeSig (..), BeatWeight (..), beatWeight) where
 
 --------------------------------------------------------------------------------
@@ -5,7 +19,10 @@ module Billboard.BeatBar (TimeSig (..), BeatWeight (..), beatWeight) where
 --------------------------------------------------------------------------------
 
 -- TODO explain Change: perhaps this should be separated
-data BeatWeight =  UnAligned | Beat | Change | Bar | Bar4 | Bar8 | Bar16 | LineStart
+-- | Barlines can have different weights. Among other applications, this is used
+-- in the printing of chord sequences.
+data BeatWeight = UnAligned | Beat | Change | Bar | Bar4 | Bar8 
+                | Bar16 | LineStart
        deriving (Eq, Ord, Enum) 
 
 instance Show BeatWeight where
@@ -18,15 +35,15 @@ instance Show BeatWeight where
   show Bar16     = "|\n|" 
   show LineStart = "|\n|" 
 
--- model a time signature as a fraction
+-- | Model a time signature as a fraction
 newtype TimeSig = TimeSig {timeSig :: (Int, Int)} deriving (Eq)
 
 instance Show TimeSig where
   show (TimeSig (num, denom)) = show num ++ '/' : show denom
 
--- defines the "metrical weight of a bar". A regular beat has strength 0, a bar
--- has strength 1, a bar after 4 bars 2, a bar after 8 bars 3, and a bar after
--- 16 bars 4.
+-- | Defines the "metrical weight of a bar". A regular beat has strength 0, 
+-- a bar has strength 1, a bar after 4 bars 2, a bar after 8 bars 3, and a bar 
+-- after 16 bars 4.
 beatWeight :: TimeSig -> Int -> BeatWeight
 beatWeight ts pos = let beat = getNrBeats ts in
   case (mod pos beat, mod pos (4*beat), mod pos (8*beat), mod pos (16*beat)) of
@@ -36,7 +53,7 @@ beatWeight ts pos = let beat = getNrBeats ts in
     (0,_,_,_) -> Bar   -- a bar position
     _         -> Beat  -- a regular beat position, weight 0 
     
--- returns the number of beats in a bar
+-- | Returns the number of beats in a bar
 getNrBeats :: TimeSig -> Int
 getNrBeats    (TimeSig (beats,  4)) = beats
 getNrBeats ts@(TimeSig (eights, 8)) 
