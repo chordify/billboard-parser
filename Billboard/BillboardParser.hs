@@ -322,32 +322,25 @@ pChordLine ts = Left <$> (setAnnotations <$> pDoubleRaw <* pSym '\t'
                                         <*> pStructStart
                                         <*> pChordSeq ts
                                         <*> pEndAnnotations)
-
-
--- mergeSegTypes :: Double -> [Annotation] -> [BBChord] -> [Annotation] 
-              -- -> (Double, [BBChord])
--- mergeSegTypes d _   [ ]    _   = (d, []) -- no chords, just a timestamp
--- mergeSegTypes d srt [c]    end = (d, [c{annotations = (srt ++ end)}])--one chord
--- mergeSegTypes d srt (c:cs) end = let (isrt, end') = partition isStart end in
-  -- (d, c          {annotations = (srt ++ isrt)}   : init cs ++ 
-      -- [(last cs) {annotations =  end'        }]) 
       
 -- merges the different forms information (annotations, beats, chords, time-
 -- stamps) into a timestamped list of 'BBChord's 
 setAnnotations :: Double -> [Annotation] -> [BBChord] -> [Annotation] 
                -> (Double, [BBChord])
 setAnnotations d _   [ ]    _   = (d, []) -- no chords, just a timestamp
--- setAnnotations d srt [c]    end = (d, [addAnnotations (srt ++ end) c])--one chord
 setAnnotations d srt chords end = 
-  (d, updateLast (addAnnotation end') (addAnnotation srt' c : cs))
+  (d, updateLast (addAnnotation end'') (addAnnotation srt' c : cs))
 
   where -- put the 'starting annotations' at the beginning
         (srt', end') = first (++ srt) (partition isStart end)
         -- if there exists annotated repeats the chords sequence in 'chords'
         -- is repeated, if not 'chords' is returned.
-        (c : cs) = case filter isRepeat end' of
-             [r] -> concat $ replicate (getRepeats r) chords
-             [ ] -> chords
+        (c : cs, end'') = case partition isRepeat end' of
+             -- in the case that we find a repetition we return an updated
+             -- list of annotations (rep'') that does not contain the repetition
+             -- Afterall, it has been expanded and could only confuse users
+             ([r], nr) -> (concat $ replicate (getRepeats r) chords, nr)
+             ([ ], _ ) -> (chords, end')
              _   -> error "Billboard.Billboardparser: multiple repeats found!" 
   
         -- replaces the list of annotations in a BBChord
