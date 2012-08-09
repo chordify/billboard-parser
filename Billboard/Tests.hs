@@ -1,4 +1,5 @@
-{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wall      #-}
+{-# LANGUAGE TupleSections #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Billboard.Tests
@@ -45,22 +46,23 @@ mainTestFile fp =
 
 -- | testing a directory of files
 mainTestDir :: FilePath -> IO ()
-mainTestDir = void . bbdir testFile where
+mainTestDir fp = getBBFiles fp >>= mapM readParse >>=
+                 void . runTestTT . applyTestToList oddBeatLengthTest where
 
-  testFile :: FilePath -> IO (Counts)
-  testFile f = readFile f >>= runTestTT . oddBeatLengthTest 
-                                        . fst . parseBillboard
+  readParse :: (FilePath, Int) -> IO (BillboardData, Int)
+  readParse (f,i) = readFile f >>= return . (,i) . fst . parseBillboard
 
 --------------------------------------------------------------------------------
 -- The unit tests
 --------------------------------------------------------------------------------
 
 -- | Tests the all beat lengths in a song and reports per song. 
-oddBeatLengthTest :: BillboardData -> Test
-oddBeatLengthTest bbd = 
+oddBeatLengthTest :: (BillboardData, Int) -> Test
+oddBeatLengthTest (bbd, bbid) = 
   let song                = getSong bbd
       (_, minLen, maxLen) = getMinMaxBeatLen song
-  in TestCase (assertBool ("odd Beat length detected for " ++ getTitle bbd)
+  in TestCase (assertBool ("odd Beat length detected for:\n" 
+                          ++ show bbid ++ ": " ++ getTitle bbd)
               (and . map (rangeCheck minLen maxLen) $ song))
 
 -- | Creates a test out of 'rangeCheck': this test reports on every chord 
@@ -68,12 +70,12 @@ oddBeatLengthTest bbd =
 -- beat length deviation, as set by 'acceptableBeatDeviationMultiplier'.
 rangeTest :: Double -> Double -> TimedData BBChord -> Test
 rangeTest minLen maxLen t = 
-  TestCase (assertBool  ("Odd Beat length detected for: " ++ showChord t) 
+  TestCase (assertBool  ("Odd Beat length detected for:\n" ++ showChord t) 
                         (rangeCheck minLen maxLen t))
 
 showChord :: TimedData BBChord -> String
 showChord t =  (show . chord . getData $ t) ++ ", length: " 
-            ++ (show . beatDuration $ t)
+            ++ (show . beatDuration $ t) ++ " @ " ++ (show . onset $ t)
 
 -- | Returns True if the 'beatDuration' of a 'TimedData' item lies between 
 -- the minimum (first argument) and the maximum (second argument) value

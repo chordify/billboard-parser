@@ -12,7 +12,7 @@
 -- Summary: A set Billboard specific file and directory utilities
 --------------------------------------------------------------------------------
 
-module Billboard.IOUtils where
+module Billboard.IOUtils (bbdir, getBBFiles, getBBFile)where
 
 import System.Directory
 import System.FilePath
@@ -21,11 +21,21 @@ import Text.Printf (printf)
 -- | Applies a function to all files in a directory
 bbdir :: (FilePath -> IO a) ->  FilePath -> IO [a]
 bbdir f fp = do dirs <- getDirectoryContents fp
-                mapM (\d -> f (fp </> d </> "salami_chords.txt")) (filter isDir dirs) where
+                mapM (\d -> f (fp </> d </> "salami_chords.txt")) 
+                     (filter isDir dirs) 
 
-  isDir :: String -> Bool
-  isDir x = x /= ".." && x /= "."
-  
+-- | Given the path to the Billboard collection, returns a list with the
+-- filepaths and id's of the salami_chords.txt files. (The id is the parent
+-- folder name.)
+getBBFiles :: FilePath -> IO [(FilePath, Int)]
+getBBFiles p = do dirs <- getDirectoryContents p
+                  mapM (\d -> return (p </> d </> "salami_chords.txt", read d)) 
+                       (filter isDir dirs) 
+
+-- Returns False on ".." and "."
+isDir :: String -> Bool
+isDir x = x /= ".." && x /= "."
+ 
 -- | Given a base directory pointing to the billboard location and a billboard
 -- id, this function returns the path to that particular billboard file. If
 -- the file does not exist, an error is thrown.
