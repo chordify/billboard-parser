@@ -1,68 +1,102 @@
-module Billboard.Tests (mainTestFile, mainTestDir) where
+{-# OPTIONS_GHC -Wall #-}
+--------------------------------------------------------------------------------
+-- |
+-- Module      :  Billboard.Tests
+-- Copyright   :  (c) 2012 Universiteit Utrecht
+-- License     :  GPL3
+--
+-- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- Summary: A set of unit tests for testing the billboard-parser
+--------------------------------------------------------------------------------
+
+module Billboard.Tests ( mainTestFile, mainTestDir ) where
 
 import Test.HUnit
 import Control.Monad (void)
 import Data.List (genericLength)
 
-import HarmTrace.Audio.ChordTypes (TimedData, onset, offset, Timed)
+import HarmTrace.Audio.ChordTypes (TimedData, onset, offset, getData, Timed)
 
 import Billboard.BillboardParser (parseBillboard)
 import Billboard.BillboardData (BillboardData (..), BBChord (..))
 
--- constants
+--------------------------------------------------------------------------------
+-- Constants
+--------------------------------------------------------------------------------
+
 acceptableBeatDeviationMultiplier :: Double
 acceptableBeatDeviationMultiplier = 0.5
 
--- applyTestToList :: (String -> Test) -> [String] -> Test
--- applyTestToList t fps = TestList (map t fps)
+ 
+--------------------------------------------------------------------------------
+-- Top level testing functions
+--------------------------------------------------------------------------------
 
--- oneChordTimedList :: String -> Test
--- oneChordTimedList = 
-  -- TestCase . assertBool "More then one chord in chord list"
-           -- . and . map oneChord . getSong . fst . parseBillboard 
-    -- where oneChord :: TimedData BBChord -> Bool
-          -- oneChord = allSame . getData
+-- | Testing one File
+mainTestFile :: FilePath -> IO ()
+mainTestFile fp = 
+  do song <- readFile fp >>= return . getSong . fst . parseBillboard
+     let (avgLen, minLen, maxLen) = getMinMaxBeatLen song
+     putStrLn ("average beat length: " ++ show avgLen)
+     void . runTestTT . applyTestToList (rangeTest minLen maxLen) $ song
 
-oddBeatLength :: BillboardData -> Test
-oddBeatLength bbd = 
-  let song   = getSong bbd
-      avgLen = (sum $ map beatDuration song) / (genericLength song)
-      minLen = avgLen *  acceptableBeatDeviationMultiplier
-      maxLen = avgLen * (acceptableBeatDeviationMultiplier + 1)
+-- | testing a directory of files
+mainTestDir :: FilePath -> IO ()
+mainTestDir fp = readFile fp >>= void . runTestTT . oddBeatLengthTest
+                                                  . fst . parseBillboard
+
+--------------------------------------------------------------------------------
+-- The unit tests
+--------------------------------------------------------------------------------
+
+-- | Tests the all beat lengths in a song and reports per song. 
+oddBeatLengthTest :: BillboardData -> Test
+oddBeatLengthTest bbd = 
+  let song                = getSong bbd
+      (_, minLen, maxLen) = getMinMaxBeatLen song
   in TestCase (assertBool ("odd Beat length detected for " ++ getTitle bbd)
               (and . map (rangeCheck minLen maxLen) $ song))
-                   
-isInRange :: Double -> Double -> TimedData BBChord -> Test
-isInRange minLen maxLen t = 
-  TestCase (assertBool  ("odd Beat length detected for " ++ show t) 
+
+-- | Creates a test out of 'rangeCheck': this test reports on every chord 
+-- whether or not the beat length is within the the allowed range of 
+-- beat length deviation, as set by 'acceptableBeatDeviationMultiplier'.
+rangeTest :: Double -> Double -> TimedData BBChord -> Test
+rangeTest minLen maxLen t = 
+  TestCase (assertBool  ("Odd Beat length detected for: " ++ showChord t) 
                         (rangeCheck minLen maxLen t))
-           
+
+showChord :: TimedData BBChord -> String
+showChord t =  (show . chord . getData $ t) ++ ", length: " 
+            ++ (show . beatDuration $ t)
+
+-- | Returns True if the 'beatDuration' of a 'TimedData' item lies between 
+-- the minimum (first argument) and the maximum (second argument) value
 rangeCheck :: Double -> Double -> TimedData a -> Bool
 rangeCheck minLen maxLen t = let len = beatDuration t 
                              in  len >= minLen && len <= maxLen
 
+-- | Given a 'TimedData', returns a triplet containing the average beat length,
+-- the minimum beat length and the maximum beat length, respectively.
+getMinMaxBeatLen :: [TimedData BBChord] -> (Double, Double, Double)
+getMinMaxBeatLen song =
+  let avgLen = (sum $ map beatDuration song) / (genericLength song)
+  in ( avgLen                                            -- average beat length
+     , avgLen *  acceptableBeatDeviationMultiplier       -- minimum beat length
+     , avgLen * (acceptableBeatDeviationMultiplier + 1)) -- maximum beat length
+     
+--------------------------------------------------------------------------------
+-- Some testing related utitlities
+--------------------------------------------------------------------------------
+
+-- | Calculates the duration of a beat
 beatDuration :: Timed t => t a -> Double
 beatDuration t = offset t - onset t
-          
--- oneChordTimedListVerbose :: String -> Test
--- oneChordTimedListVerbose = 
-  -- TestList . map oneChord . getSong . fst . parseBillboard 
-    -- where oneChord :: TimedData BBChord -> Test
-          -- oneChord c = TestCase $ assertBool 
-            -- (show c ++ " contains more then one chord in chord list" )
-            -- (allSame $ getData c)
-            
--- allSame :: [BBChord] -> Bool  
--- allSame (c:cs) = null $ dropWhile ((== chord c) . chord) cs
 
--- testing one File
-mainTestFile :: FilePath -> IO ()
-mainTestFile fp = return ()
+-- | Applies a test to a list of testable items
+applyTestToList :: (a -> Test) -> [a] -> Test
+applyTestToList test a = TestList (map test a)
 
--- testing a directory of files
-mainTestDir :: FilePath -> IO ()
-mainTestDir fp = readFile fp >>= void . runTestTT . oddBeatLength 
-                                                  . fst . parseBillboard
-              -- do cs <- mapM readFile fps 
-                 -- void . runTestTT $ applyTestToList oneChordTimedList cs
-  -- f fp = readFile fp >>= void . runTest . oneChordTimedListVerbose
+

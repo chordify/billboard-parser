@@ -22,16 +22,15 @@ import Billboard.BillboardData ( BBChord (..), getBBChords
                                , BillboardData(..), getTitle, showInMIREXFormat)
 import Billboard.BillboardParser ( parseBillboard )
 import Billboard.Tests (mainTestFile, mainTestDir)
+import Billboard.IOUtils 
 
 -- harmtrace imports
 import HarmTrace.Audio.ChordTypes (TimedData (..))
 
 -- other libraries
 import System.Console.ParseArgs
-import System.Directory
 import System.FilePath
 import Control.Monad (when, void)
-import Text.Printf (printf)
 
 --------------------------------------------------------------------------------
 -- Contants
@@ -51,8 +50,8 @@ myArgs = [
            Arg { argIndex = ModeArg,
                  argAbbr  = Just 'm',
                  argName  = Just "mode",
-                 argData  = argDataRequired "(parse|mirex)" ArgtypeString,
-                 argDesc  = "The operation mode (parse|mirex)"
+                 argData  = argDataRequired "(parse|mirex|test)" ArgtypeString,
+                 argDesc  = "The operation mode (parse|mirex|test)"
                }
          , Arg { argIndex = InputFilepath,
                  argAbbr  = Just 'f',
@@ -69,14 +68,14 @@ myArgs = [
          , Arg { argIndex = InputID,
                  argAbbr  = Just 'i',
                  argName  = Just "id",
-                 argData  = argDataOptional "filepath" ArgtypeInt,
+                 argData  = argDataOptional "integer" ArgtypeInt,
                  argDesc  = (  "Input identifier (0-1000). Can only be used in "
                             ++ "combination with a base directory" )
                }
          ]
 
 -- representing the mode of operation
-data Mode = Mirex | Parse deriving (Eq)
+data Mode = Mirex | Parse | Test deriving (Eq)
 
 -- Run from CL
 main :: IO ()
@@ -85,6 +84,7 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
           let mode   = case (getRequiredArg arg ModeArg) of
                          "mirex" -> Mirex
                          "parse" -> Parse
+                         "test" -> Test
                          m       -> usageError arg ("unrecognised mode: " ++ m)
               -- get filepaths           
               inFile = getArg arg InputFilepath
@@ -96,7 +96,7 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
                         -- we have two ways of identifying a file: by filename
                         (Just f , Nothing, Nothing) -> return (Left f)
                         -- or by basepath and id
-                        (Nothing, Just d , Just i ) -> getBBFile arg d i 
+                        (Nothing, Just d , Just i ) -> getBBFile d i 
                                                        >>= return . Left
                         (Nothing, Just d , Nothing) -> return (Right d)
                         _ -> usageError arg "Invalid filepaths" 
@@ -107,6 +107,8 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
             (Mirex, Right d) -> void (mirexDir d)
             (Parse, Left  f) -> parseFile f
             (Parse, Right d) -> parseDir d
+            (Test , Left  f) -> mainTestFile f
+            (Test , Right d) -> mainTestDir d
 
             
 
@@ -178,30 +180,4 @@ mirexDir = bbdir toMirex where
        writeFile (d </> outputFileName) s
        putStrLn ("written file: " ++ d </> outputFileName)
        return s
-     
---------------------------------------------------------------------------------
--- Some (Billboard) file utilities
---------------------------------------------------------------------------------
-              
--- | Applies a function to all files in a directory
-bbdir :: (FilePath -> IO a) ->  FilePath -> IO [a]
-bbdir f fp = do dirs <- getDirectoryContents fp
-                mapM (f . (fp </> )) (filter isDir dirs) where
-
-  isDir :: String -> Bool
-  isDir x = x /= ".." && x /= "."
-  
--- | Given a base directory pointing to the billboard location and a billboard
--- id, this function returns the path to that particular billboard file. If
--- the file does not exist, a usage error is thrown.
-getBBFile :: Ord a => Args a -> FilePath -> Int -> IO (FilePath)
-getBBFile arg billboardLoc nr = 
-  do let  fp = billboardLoc </> printf "%04d" nr </> "salami_chords.txt"
-     fpExist <- doesFileExist fp
-     case fpExist of
-       True  -> return fp 
-       False -> usageError arg ("Error: " ++ printf "%04d" nr 
-                  ++ " is not a valid billboard id, or the directory " 
-                  ++ billboardLoc ++"does not point to the billboard collection"
-                  ++ " Regardless, the file " ++ fp ++ " does not exist" )
 
