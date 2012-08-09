@@ -22,7 +22,7 @@ import Data.List (genericLength)
 import HarmTrace.Audio.ChordTypes (TimedData, onset, offset, getData, Timed)
 
 import Billboard.BillboardParser (parseBillboard)
-import Billboard.BillboardData (BillboardData (..), BBChord (..))
+import Billboard.BillboardData (BillboardData (..), BBChord (..), isNoneBBChord)
 import Billboard.IOUtils
 
 --------------------------------------------------------------------------------
@@ -79,9 +79,12 @@ showChord t =  (show . chord . getData $ t) ++ ", length: "
 
 -- | Returns True if the 'beatDuration' of a 'TimedData' item lies between 
 -- the minimum (first argument) and the maximum (second argument) value
-rangeCheck :: Double -> Double -> TimedData a -> Bool
+rangeCheck :: Double -> Double -> TimedData BBChord -> Bool
 rangeCheck minLen maxLen t = let len = beatDuration t 
-                             in  len >= minLen && len <= maxLen
+                             in  (len >= minLen && len <= maxLen) ||
+                                 -- None chords are not expected to be 
+                                 -- beat aligned and are ignored
+                                 (isNoneBBChord . getData $ t)
 
 -- | Given a 'TimedData', returns a triplet containing the average beat length,
 -- the minimum beat length and the maximum beat length, respectively.
