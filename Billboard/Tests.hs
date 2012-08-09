@@ -22,6 +22,7 @@ import HarmTrace.Audio.ChordTypes (TimedData, onset, offset, getData, Timed)
 
 import Billboard.BillboardParser (parseBillboard)
 import Billboard.BillboardData (BillboardData (..), BBChord (..))
+import Billboard.IOUtils
 
 --------------------------------------------------------------------------------
 -- Constants
@@ -29,7 +30,6 @@ import Billboard.BillboardData (BillboardData (..), BBChord (..))
 
 acceptableBeatDeviationMultiplier :: Double
 acceptableBeatDeviationMultiplier = 0.5
-
  
 --------------------------------------------------------------------------------
 -- Top level testing functions
@@ -45,8 +45,11 @@ mainTestFile fp =
 
 -- | testing a directory of files
 mainTestDir :: FilePath -> IO ()
-mainTestDir fp = readFile fp >>= void . runTestTT . oddBeatLengthTest
-                                                  . fst . parseBillboard
+mainTestDir = void . bbdir testFile where
+
+  testFile :: FilePath -> IO (Counts)
+  testFile f = readFile f >>= runTestTT . oddBeatLengthTest 
+                                        . fst . parseBillboard
 
 --------------------------------------------------------------------------------
 -- The unit tests
@@ -97,6 +100,6 @@ beatDuration t = offset t - onset t
 
 -- | Applies a test to a list of testable items
 applyTestToList :: (a -> Test) -> [a] -> Test
-applyTestToList test a = TestList (map test a)
+applyTestToList testf a = TestList (map testf a)
 
 

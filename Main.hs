@@ -142,12 +142,12 @@ printBillboard bbd =
 
 -- parses a directory of Billboard songs
 parseDir :: FilePath -> IO ()
-parseDir = void . bbdir oneSliceSalami where
+parseDir d = void . bbdir oneSliceSalami $ d where
     -- parses a billboard file and presents the user with condenced output
     -- If parsing errors are encountered, they are printed
     oneSliceSalami :: FilePath -> IO ([TimedData BBChord])
-    oneSliceSalami d = 
-      do inp <- readFile (d </> "salami_chords.txt")
+    oneSliceSalami f = 
+      do inp <- readFile f
          let (bbd, err) = parseBillboard inp
              s          = getSong bbd
          putStrLn (getArtist bbd ++ ": " ++ getTitle bbd)
@@ -167,16 +167,15 @@ mirexFile f = readFile f >>= putStrLn . showInMIREXFormat . fst . parseBillboard
 -- Reads a directory an writes a file with the chords in mirex format in the 
 -- folder containing also the original file
 mirexDir :: FilePath -> IO [String]
-mirexDir = bbdir toMirex where
+mirexDir d = bbdir toMirex d where
 
   -- read, parses, and writes one mirex chord file
   toMirex :: FilePath -> IO (String)
-  toMirex d = 
-    do inp <- readFile (d </> "salami_chords.txt")
+  toMirex f = 
+    do inp <- readFile f
        let (bbd, err) = parseBillboard inp
            s          = showInMIREXFormat bbd
-       when (not $ null err) 
-            (error ("there were errors in file: " ++ d </> "salami_chords.txt"))
+       when (not $ null err) (error ("there were errors in file: " ++ f))
        writeFile (d </> outputFileName) s
        putStrLn ("written file: " ++ d </> outputFileName)
        return s
