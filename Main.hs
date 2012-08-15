@@ -32,12 +32,13 @@ import System.Console.ParseArgs
 import System.FilePath
 import Control.Monad (when, void)
 
+import Debug.Trace
 --------------------------------------------------------------------------------
 -- Contants
 --------------------------------------------------------------------------------
 
 outputFileName :: FilePath
-outputFileName = "mirex_chords.txt"
+outputFileName = "mirex_chords" <.> "txt"
 
 --------------------------------------------------------------------------------
 -- Commandline argument parsing
@@ -172,11 +173,12 @@ mirexDir d = bbdir toMirex d where
   -- read, parses, and writes one mirex chord file
   toMirex :: FilePath -> IO (String)
   toMirex f = 
-    do inp <- readFile f
+    do inp <- traceShow f $ readFile f
        let (bbd, err) = parseBillboard inp
            s          = showInMIREXFormat bbd
+           out        = traceShow f $ (dropFileName f) </> outputFileName
        when (not $ null err) (error ("there were errors in file: " ++ f))
-       writeFile (d </> outputFileName) s
-       putStrLn ("written file: " ++ d </> outputFileName)
+       writeFile out s
+       putStrLn ("written file: " ++ out)
        return s
 

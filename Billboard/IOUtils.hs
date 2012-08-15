@@ -17,24 +17,24 @@ module Billboard.IOUtils (bbdir, getBBFiles, getBBFile)where
 import System.Directory
 import System.FilePath
 import Text.Printf (printf)
+import Control.Monad (filterM)
 
 -- | Applies a function to all files in a directory
 bbdir :: (FilePath -> IO a) ->  FilePath -> IO [a]
-bbdir f fp = do dirs <- getDirectoryContents fp
-                mapM (\d -> f (fp </> d </> "salami_chords.txt")) 
-                     (filter isDir dirs) 
+bbdir f fp =   getDirectoryContents fp >>= filterM notCurrentParent 
+           >>= mapM (\d -> f (fp </> d </> "salami_chords.txt")) 
 
 -- | Given the path to the Billboard collection, returns a list with the
 -- filepaths and id's of the salami_chords.txt files. (The id is the parent
 -- folder name.)
 getBBFiles :: FilePath -> IO [(FilePath, Int)]
-getBBFiles p = do dirs <- getDirectoryContents p
-                  mapM (\d -> return (p </> d </> "salami_chords.txt", read d)) 
-                       (filter isDir dirs) 
+getBBFiles p =   getDirectoryContents p >>= filterM notCurrentParent  
+             >>= mapM (\d -> return (p </> d </> "salami_chords.txt", read d)) 
+                       
 
 -- Returns False on ".." and "."
-isDir :: String -> Bool
-isDir x = x /= ".." && x /= "."
+notCurrentParent :: String -> IO Bool
+notCurrentParent x = return (x /= ".." && x /= ".")
  
 -- | Given a base directory pointing to the billboard location and a billboard
 -- id, this function returns the path to that particular billboard file. If
