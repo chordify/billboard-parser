@@ -32,7 +32,6 @@ import System.Console.ParseArgs
 import System.FilePath
 import Control.Monad (when, void)
 
-import Debug.Trace
 --------------------------------------------------------------------------------
 -- Contants
 --------------------------------------------------------------------------------
@@ -173,10 +172,10 @@ mirexDir d = bbdir toMirex d where
   -- read, parses, and writes one mirex chord file
   toMirex :: FilePath -> IO (String)
   toMirex f = 
-    do inp <- traceShow f $ readFile f
+    do inp <- readFile f
        let (bbd, err) = parseBillboard inp
            s          = showInMIREXFormat bbd
-           out        = traceShow f $ (dropFileName f) </> outputFileName
+           out        = (dropFileName f) </> outputFileName
        when (not $ null err) (error ("there were errors in file: " ++ f))
        writeFile out s
        putStrLn ("written file: " ++ out)
