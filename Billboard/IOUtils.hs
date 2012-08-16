@@ -21,21 +21,24 @@ import Control.Monad (filterM)
 
 -- | Applies a function to all files in a directory
 bbdir :: (FilePath -> IO a) ->  FilePath -> IO [a]
-bbdir f fp =   getDirectoryContents fp >>= filterM notCurrentParent 
+bbdir f fp =   getDirectoryContents fp >>= filterM isBillboardDir 
            >>= mapM (\d -> f (fp </> d </> "salami_chords.txt")) 
 
 -- | Given the path to the Billboard collection, returns a list with the
 -- filepaths and id's of the salami_chords.txt files. (The id is the parent
 -- folder name.)
 getBBFiles :: FilePath -> IO [(FilePath, Int)]
-getBBFiles p =   getDirectoryContents p >>= filterM notCurrentParent  
+getBBFiles p =   getDirectoryContents p >>= filterM isBillboardDir  
              >>= mapM (\d -> return (p </> d </> "salami_chords.txt", read d)) 
-                       
 
--- Returns False on ".." and "."
-notCurrentParent :: String -> IO Bool
-notCurrentParent x = return (x /= ".." && x /= ".")
- 
+-- Returns true if the folder name is 4 characters long and a number between 
+-- 0 and 1000
+isBillboardDir :: String -> IO Bool
+isBillboardDir x = case length x of
+  4 -> do let n = read x :: Int -- x should be a folder 0 - 1000
+          return (n >= 0 && n <= 1000)
+  _ -> return False
+
 -- | Given a base directory pointing to the billboard location and a billboard
 -- id, this function returns the path to that particular billboard file. If
 -- the file does not exist, an error is thrown.
