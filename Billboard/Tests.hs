@@ -17,20 +17,13 @@ module Billboard.Tests ( mainTestFile, mainTestDir ) where
 
 import Test.HUnit
 import Control.Monad (void)
-import Data.List (genericLength)
 
-import HarmTrace.Audio.ChordTypes (TimedData, onset, offset, getData, Timed)
+import HarmTrace.Audio.ChordTypes (TimedData, onset, getData, Timed)
 
 import Billboard.BillboardParser (parseBillboard)
-import Billboard.BillboardData (BillboardData (..), BBChord (..), isNoneBBChord)
+import Billboard.BillboardData (BillboardData (..), BBChord (..))
 import Billboard.IOUtils
-
---------------------------------------------------------------------------------
--- Constants
---------------------------------------------------------------------------------
-
-acceptableBeatDeviationMultiplier :: Double
-acceptableBeatDeviationMultiplier = 0.25
+import Billboard.PostProcessing (rangeCheck, getMinMaxBeatLen, beatDuration)
  
 --------------------------------------------------------------------------------
 -- Top level testing functions
@@ -69,39 +62,18 @@ oddBeatLengthTest (bbd, bbid) =
 -- whether or not the beat length is within the the allowed range of 
 -- beat length deviation, as set by 'acceptableBeatDeviationMultiplier'.
 rangeTest :: Double -> Double -> TimedData BBChord -> Test
-rangeTest minLen maxLen t = 
-  TestCase (assertBool  ("Odd Beat length detected for:\n" ++ showChord t) 
-                        (rangeCheck minLen maxLen t))
+rangeTest minLen maxLen td = 
+  TestCase (assertBool  ("Odd Beat length detected for:\n" ++ showChord td) 
+                        (rangeCheck minLen maxLen td)) where
+    
+    -- | give some infromation about what is wrong
+    showChord :: TimedData BBChord -> String
+    showChord t =  (show . chord . getData $ t) ++ ", length: " 
+                ++ (show . beatDuration $ t) ++ " @ " ++ (show . onset $ t)
 
-showChord :: TimedData BBChord -> String
-showChord t =  (show . chord . getData $ t) ++ ", length: " 
-            ++ (show . beatDuration $ t) ++ " @ " ++ (show . onset $ t)
-
--- | Returns True if the 'beatDuration' of a 'TimedData' item lies between 
--- the minimum (first argument) and the maximum (second argument) value
-rangeCheck :: Double -> Double -> TimedData BBChord -> Bool
-rangeCheck minLen maxLen t = let len = beatDuration t 
-                             in  (len >= minLen && len <= maxLen) ||
-                                 -- None chords are not expected to be 
-                                 -- beat aligned and are ignored
-                                 (isNoneBBChord . getData $ t)
-
--- | Given a 'TimedData', returns a triplet containing the average beat length,
--- the minimum beat length and the maximum beat length, respectively.
-getMinMaxBeatLen :: [TimedData BBChord] -> (Double, Double, Double)
-getMinMaxBeatLen song =
-  let avgLen = (sum $ map beatDuration song) / (genericLength song)
-  in ( avgLen                                            -- average beat length
-     , avgLen *  acceptableBeatDeviationMultiplier       -- minimum beat length
-     , avgLen * (acceptableBeatDeviationMultiplier + 1)) -- maximum beat length
-     
 --------------------------------------------------------------------------------
 -- Some testing related utitlities
 --------------------------------------------------------------------------------
-
--- | Calculates the duration of a beat
-beatDuration :: Timed t => t a -> Double
-beatDuration t = offset t - onset t
 
 -- | Applies a test to a list of testable items
 applyTestToList :: (a -> Test) -> [a] -> Test
