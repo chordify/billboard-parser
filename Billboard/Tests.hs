@@ -21,17 +21,11 @@ import Data.List (genericLength)
 
 import HarmTrace.Audio.ChordTypes (TimedData, onset, offset, getData, Timed)
 
-import Billboard.BillboardParser (parseBillboard)
+import Billboard.BillboardParser ( parseBillboard
+                                 , acceptableBeatDeviationMultiplier)
 import Billboard.BillboardData (BillboardData (..), BBChord (..), isNoneBBChord)
 import Billboard.IOUtils
 
---------------------------------------------------------------------------------
--- Constants
---------------------------------------------------------------------------------
-
-acceptableBeatDeviationMultiplier :: Double
-acceptableBeatDeviationMultiplier = 0.25
- 
 --------------------------------------------------------------------------------
 -- Top level testing functions
 --------------------------------------------------------------------------------
