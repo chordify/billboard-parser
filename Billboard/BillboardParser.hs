@@ -35,6 +35,7 @@ import Billboard.BillboardData
 import Billboard.Annotation (  Annotation (..), Label (..)
                             , Instrument (..), Description (..), isStart
                             , isRepeat, getRepeats)
+import Debug.Trace
 -- debugging single lines
 -- testshort :: IO()
 -- testshort =  do let c = "205.132630385\tD, interlude, | G:maj | G:maj | G:maj | G:maj |"
@@ -304,7 +305,7 @@ avgBeatLen l = (sum . map avg $ l) / genericLength l where
 -- data BeatState = BS { avgBeat  :: Double
                     -- , prevBeat :: Double
                     -- , totLen   :: Double }
-                    
+
 data BeatState = BS Double Double Double
                     
 maxDev :: Double
@@ -318,10 +319,8 @@ testSeq = [ BBChord [] Change (Chord (Note Nothing C) Maj [] 0 1)
 fixOddLongBeats :: TimedData [BBChord] -> State BeatState (TimedData [BBChord])
 fixOddLongBeats td@(TimedData dat on off) = 
    do (BS avgBt prvBt totLen) <- get
-      -- avgBt <- avgBeat $ get
-      -- totL  <- totLen  $ get
       let curBt = (off - on) / genericLength dat
-      case ( curBt <= (maxDev * avgBt), on < (totLen * 0.5) ) of           
+      case ( curBt >= ((1 + maxDev) * avgBt), on < (totLen * 0.5) ) of           
              -- odd beat length in the first halve of the song
              (True, True ) -> return (fmap (replicateNone prvBt td ++) td)
              -- odd beat length in the second halve of the song
@@ -334,7 +333,8 @@ replicateNone prvBeat (TimedData dat on off) =
   -- calculate the number of beats expected, minus the actual chords in the list
   let nrN  = (round ((off - on) / prvBeat)) - (length dat) 
   -- TODO perhaps later annotate that this is an interpolated N
-  in replicate nrN noneBBChord
+  in addLabel (Anno InterpolationInsert) (replicate nrN noneBBChord)
+
 --------------------------------------------------------------------------------
 -- Chord sequence data parsers
 --------------------------------------------------------------------------------
