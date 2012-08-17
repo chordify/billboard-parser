@@ -60,8 +60,11 @@ data Description = Chorus  | Intro | Outro | Bridge  | Interlude | Solo
                  | Coda    | Transistion | PreVerse   |Vocal  | Talking
                  | Repeat Int
                  | Verse  (Maybe Int)
-                 | UnknownAnno String -- ^ a catch all description for 
-                                      -- unrecognised descriptions
+                 -- | a chord inserted by the posprocessing interpolation
+                 | InterpolationInsert
+                 -- | a catch all description for unrecognised descriptions
+                 | UnknownAnno String 
+
        deriving (Show, Eq)
 
 

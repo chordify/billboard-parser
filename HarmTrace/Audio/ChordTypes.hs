@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeSynonymInstances             #-}
 {-# LANGUAGE FlexibleInstances                #-}
 {-# LANGUAGE KindSignatures                   #-}
+{-# LANGUAGE DeriveFunctor                    #-}
 
 module HarmTrace.Audio.ChordTypes where
              
@@ -18,11 +19,11 @@ type ChordBeatAnnotation = [BeatTimedData ChordLabel]
 -- list with chords and segment boundaries
 type ChordAnnotation = [TimedData ChordLabel]
 
-data TimedData a = TimedData a NumData NumData
+data TimedData a = TimedData a NumData NumData deriving Functor
 
 -- a datatype that wraps around an arbitrary datatype adding (in this order)
 -- a 'Beat', an onset, and an offset
-data BeatTimedData a = BeatTimedData a Beat NumData NumData
+data BeatTimedData a = BeatTimedData a Beat NumData NumData deriving Functor
 
 -- an alternative constructor for a BeatTimedData using two BeatBar datatypes
 -- instead of a 'Beat' and two 'NumData's

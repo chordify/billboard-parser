@@ -21,12 +21,13 @@ module Billboard.BillboardParser ( parseBillboard ) where
 
 import Data.List (genericLength, partition)
 import Control.Arrow (first)
+import Control.Monad.State
 import Text.ParserCombinators.UU
 import Data.Either (lefts)
 
 import HarmTrace.Base.Parsing hiding (pLineEnd)
 import HarmTrace.Base.MusicRep hiding (isNone)
-import HarmTrace.Audio.ChordTypes (TimedData (..))
+import HarmTrace.Audio.ChordTypes (TimedData (..), Timed (..))
 import HarmTrace.Tokenizer.Tokenizer (pRoot, pChord)
 
 import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..))
@@ -279,28 +280,61 @@ pChordLines ts =  (interp . setTiming . lefts)
   setTiming [_] = [] -- remove the end 
   setTiming (a : b : cs) = TimedData (snd a) (fst a) (fst b) : setTiming (b:cs)
   
-  -- interpolates the on- and offset for every 'BBChord' in a timestamped list  
-  -- of 'BBChord's 
-  interp :: [TimedData [BBChord]] -> [TimedData BBChord]
-  interp = concatMap interpolate where
-  
-    -- splits a one 'TimedData [BBChord]' into multiple instances interpolating
-    -- the off an onsets by evenly dividing the time for every beat.
-    interpolate :: TimedData [BBChord] -> [TimedData BBChord]
-    interpolate (TimedData dat on off) = 
-      let -- gbc = groupByChord dat
-          bt  = (off - on) / genericLength dat
-      in  zipWith3 TimedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
+-- interpolates the on- and offset for every 'BBChord' in a timestamped list  
+-- of 'BBChord's 
+interp :: [TimedData [BBChord]] -> [TimedData BBChord]
+interp = concatMap interpolate where
 
--- setBeatIx :: [TimedData [BBChord]] -> [TimedData [BBChord]]
--- setBeatIx tcs = start : zipWith setIx [0, getNrOfBeats ts, ..] (reverse rest) ++ [end] where
-  -- -- strip the first and the last None chords
-  -- (start : rest    ) = tcs
-  -- (end   : revrest ) = reverse rest'
-  
--- setIx :: Int -> TimedData [BBChord] -> TimedData [BBChord]
--- setIx ix tdrc = 
+  -- splits a one 'TimedData [BBChord]' into multiple instances interpolating
+  -- the off an onsets by evenly dividing the time for every beat.
+  interpolate :: TimedData [BBChord] -> [TimedData BBChord]
+  interpolate (TimedData dat on off) = 
+    let bt  = (off - on) / genericLength dat
+    in  zipWith3 TimedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
 
+      
+avgBeatLen :: [TimedData [BBChord]] -> Double
+avgBeatLen l = (sum . map avg $ l) / genericLength l where
+  avg (TimedData dat on off) = (off - on) / genericLength dat 
+    
+-- type AvgBeat  = Double
+-- type PrevBeat = Double 
+-- type TotalLength
+
+-- data BeatState = BS { avgBeat  :: Double
+                    -- , prevBeat :: Double
+                    -- , totLen   :: Double }
+                    
+data BeatState = BS Double Double Double
+                    
+maxDev :: Double
+maxDev = 0.25
+
+testSeq :: [BBChord]
+testSeq = [ BBChord [] Change (Chord (Note Nothing C) Maj [] 0 1)
+          , BBChord [] Change (Chord (Note Nothing D) Min [] 0 1)
+          , BBChord [] Change (Chord (Note Nothing G) Maj [] 0 1) ]
+
+fixOddLongBeats :: TimedData [BBChord] -> State BeatState (TimedData [BBChord])
+fixOddLongBeats td@(TimedData dat on off) = 
+   do (BS avgBt prvBt totLen) <- get
+      -- avgBt <- avgBeat $ get
+      -- totL  <- totLen  $ get
+      let curBt = (off - on) / genericLength dat
+      case ( curBt <= (maxDev * avgBt), on < (totLen * 0.5) ) of           
+             -- odd beat length in the first halve of the song
+             (True, True ) -> return (fmap (replicateNone prvBt td ++) td)
+             -- odd beat length in the second halve of the song
+             (True, False) -> return (fmap (++ replicateNone prvBt td) td)
+             -- No odd beat length
+             (False, _   ) -> return td
+             
+replicateNone :: Double -> TimedData [BBChord] -> [BBChord]
+replicateNone prvBeat (TimedData dat on off) = 
+  -- calculate the number of beats expected, minus the actual chords in the list
+  let nrN  = (round ((off - on) / prvBeat)) - (length dat) 
+  -- TODO perhaps later annotate that this is an interpolated N
+  in replicate nrN noneBBChord
 --------------------------------------------------------------------------------
 -- Chord sequence data parsers
 --------------------------------------------------------------------------------
