@@ -31,7 +31,7 @@ import HarmTrace.Base.MusicRep hiding (isNone)
 import HarmTrace.Audio.ChordTypes (TimedData (..), Timed (..))
 import HarmTrace.Tokenizer.Tokenizer (pRoot, pChord)
 
-import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..))
+import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..), beatsPerBar)
 import Billboard.BillboardData 
 import Billboard.Annotation (  Annotation (..), Label (..)
                             , Instrument (..), Description (..), isStart
@@ -286,7 +286,7 @@ pChordLines ts =  (interp . setTiming . lefts)
 interp :: [TimedData [BBChord]] -> [TimedData BBChord]
 interp = concatMap interpolate . fixOddLongBeats where
 
-  -- splits a one 'TimedData [BBChord]' into multiple instances interpolating
+  -- splits a 'TimedData [BBChord]' into multiple instances interpolating
   -- the off an onsets by evenly dividing the time for every beat.
   interpolate :: TimedData [BBChord] -> [TimedData BBChord]
   interpolate (TimedData dat on off) = 
@@ -438,11 +438,12 @@ markBarStart (h:t) = h {weight = Bar} : t
 -- chord in the first and second halve of the bar) and multiple chords and there
 -- repetitons marked with a '.'
 updateRep :: TimeSig -> [BBChord] -> [BBChord]
-updateRep _                [ ]      = error "updateRep: no chords to update"
-updateRep (TimeSig (n,_d)) [c]      = replChord n c 
-updateRep (TimeSig (n,_d)) [c1, c2] = let t = n `div` 2 
-                                      in  replChord t c1 ++ replChord t c2
-updateRep _                cs       = update cs
+updateRep _  [ ]      = error "updateRep: no chords to update"
+updateRep ts [c]      = replChord (beatsPerBar ts) c 
+updateRep ts [c1, c2] = let t = (beatsPerBar ts) `div` 2 
+                        in  replChord t c1 ++ replChord t c2
+updateRep _  cs       = update cs
+
   where update :: [BBChord] -> [BBChord]
         update [ ]    = [ ]
         update [x]    = [x]
