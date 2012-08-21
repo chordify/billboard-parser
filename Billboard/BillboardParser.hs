@@ -270,16 +270,18 @@ pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 -- Top-level parser for parsing chords sequence lines an annotations
 pChordLines :: TimeSig -> Parser [TimedData BBChord]
 pChordLines ts =  (interp . setTiming . lefts) 
-               <$> pListSep_ng pLineEnd 
-                             (pChordLine ts <|> pSilenceEndLine <|> pMetaChange)
-               <*  pLineEnd where
-
+               <$> pListSep_ng pLineEnd (pLine ts) <*  pLineEnd where
+               
   -- labels every line with the corresponding starting and ending times (where
   -- the end time is actually the start time of the next chord line)
   setTiming :: [(Double, a)] -> [TimedData a]
   setTiming [ ] = []
   setTiming [_] = [] -- remove the end 
   setTiming (a : b : cs) = TimedData (snd a) (fst a) (fst b) : setTiming (b:cs)
+
+-- Parses one line which can be chords, meta information, or end/silence
+pLine :: TimeSig -> Parser (Either (Double, [BBChord]) Meta)         
+pLine ts = pChordLine ts <|> pSilenceEndLine <|> pMetaChange  
   
 -- interpolates the on- and offset for every 'BBChord' in a timestamped list  
 -- of 'BBChord's 
