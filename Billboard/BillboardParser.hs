@@ -435,19 +435,22 @@ markBarStart []    = []
 markBarStart (h:t) = h {weight = Bar} : t
   
 -- within a bar there can be one chord, two chords (representing the sounding
--- chord in the first and second halve of the bar) and multiple chords and there
+-- chord in the first and second halve of the bar), multiple chords, and 
 -- repetitons marked with a '.'
 updateRep :: TimeSig -> [BBChord] -> [BBChord]
 updateRep _  [ ]      = error "updateRep: no chords to update"
-updateRep ts [c]      = replChord (beatsPerBar ts) c 
-updateRep ts [c1, c2] = let t = (beatsPerBar ts) `div` 2 
-                        in  replChord t c1 ++ replChord t c2
-updateRep _  cs       = update cs
-
+updateRep ts [c]      = replChord (beatsPerBar ts) c          -- one chord
+updateRep ts [c1, c2] = let t = (beatsPerBar ts) `div` 2      -- two chords
+                        in  replChord t c1 ++ replChord t c2    
+updateRep _  cs       = update cs                             -- multiple chords
+  -- updates the repetited chords ('.')
   where update :: [BBChord] -> [BBChord]
         update [ ]    = [ ]
         update [x]    = [x]
         update (x:y:xs) = case weight y of
+          -- Because at parsing time we do not know which chord is repeated 
+          -- by a '.' we replact the chord in the 'BBChord' by previous chord
+          -- (at parsing time a None chord is stored in the BBchord)
           Beat   -> x : update (y {chord = chord x}: xs)
           Change -> x : update (y : xs)
           _      -> error "update: unexpected beat weigth" -- cannot happen
