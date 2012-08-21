@@ -20,6 +20,7 @@ module Billboard.BillboardData ( BBChord (..), isChange, hasAnnotations
                                , isStructSegStart, isNoneBBChord, noneBBChord
                                , BillboardData (..), Artist, Title, Meta (..)
                                , getBBChords, filterNoneChords
+                               , addStart, addEnd, addLabel
                                , showInMIREXFormat
                                ) where
 
@@ -28,7 +29,8 @@ import HarmTrace.Base.MusicRep  hiding (isNone)
 import HarmTrace.Audio.ChordTypes (TimedData (..), getData, onset, offset)
 
 import Billboard.BeatBar
-import Billboard.Annotation ( Annotation (..), isStart, isStruct, getLabel )
+import Billboard.Annotation ( Annotation (..), isStart, isStruct
+                            , getLabel, Label)
 
 import Data.List (partition)
 
@@ -116,6 +118,25 @@ isNoneBBChord = isNoneChord . chord
 -- | Returns True if the 'BBChord' has any 'Boundary's and false otherwise
 hasAnnotations :: BBChord -> Bool
 hasAnnotations = not . null . annotations
+
+-- | Adds a starting point of an 'Annotation' 'Label' to a 'BBChord'
+addStart :: Label -> BBChord -> BBChord
+addStart lab chrd = chrd { annotations = Start lab : annotations chrd }
+
+-- | Adds a end point of an 'Annotation' 'Label' to a 'BBChord'
+addEnd :: Label -> BBChord -> BBChord
+addEnd lab chrd = chrd { annotations = End lab : annotations chrd }
+
+-- | Annotates a sequence of 'BBChord's by adding a Start 'Label' 'Annotation'
+-- at the first chord and an End 'Label' 'Annotation' at the last chord. The
+-- remainder of the list remains untouched
+addLabel :: Label -> [BBChord] -> [BBChord]
+addLabel _ [ ] = [ ]
+addLabel lab [c] = [addStart lab . addEnd lab $ c]
+addLabel lab (c:cs)  = addStart lab c : foldr step [] cs where
+  step :: BBChord -> [BBChord] -> [BBChord]
+  step x [] = [addEnd lab x] -- add a label to the last element of the list
+  step x xs = x : xs
 
 -- | Strips the time stamps from BillBoardData and concatnates all 'BBChords',
 -- it also removes all NoneChords

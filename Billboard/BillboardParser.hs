@@ -17,32 +17,34 @@
 -- 2011. (<http://ismir2011.ismir.net/papers/OS8-1.pdf>) 
 --------------------------------------------------------------------------------
 
-module Billboard.BillboardParser ( parseBillboard ) where
+module Billboard.BillboardParser ( parseBillboard
+                                 , acceptableBeatDeviationMultiplier ) where
 
 import Data.List (genericLength, partition)
 import Control.Arrow (first)
+import Control.Monad.State
 import Text.ParserCombinators.UU
 import Data.Either (lefts)
 
 import HarmTrace.Base.Parsing hiding (pLineEnd)
 import HarmTrace.Base.MusicRep hiding (isNone)
-import HarmTrace.Audio.ChordTypes (TimedData (..))
+import HarmTrace.Audio.ChordTypes (TimedData (..), Timed (..))
 import HarmTrace.Tokenizer.Tokenizer (pRoot, pChord)
 
-import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..))
+import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..), beatsPerBar)
 import Billboard.BillboardData 
 import Billboard.Annotation (  Annotation (..), Label (..)
                             , Instrument (..), Description (..), isStart
                             , isRepeat, getRepeats)
--- debugging single lines
--- testshort :: IO()
--- testshort =  do let c = "205.132630385\tD, interlude, | G:maj | G:maj | G:maj | G:maj |"
-                    -- (s, err) = parseDataWithErrors (show <$> pChordLine (TimeSig (4,4))) c
-                    -- -- (s, err) = parseDataWithErrors (show <$> pSilenceEndLine) c
-                -- print c
-                -- mapM_ print err
-                -- print s
-                
+                            
+
+--------------------------------------------------------------------------------
+-- Constants
+--------------------------------------------------------------------------------
+
+acceptableBeatDeviationMultiplier :: Double
+acceptableBeatDeviationMultiplier = 0.25
+
 --------------------------------------------------------------------------------
 -- Top level Billboard parsers
 --------------------------------------------------------------------------------
@@ -279,27 +281,65 @@ pChordLines ts =  (interp . setTiming . lefts)
   setTiming [_] = [] -- remove the end 
   setTiming (a : b : cs) = TimedData (snd a) (fst a) (fst b) : setTiming (b:cs)
   
-  -- interpolates the on- and offset for every 'BBChord' in a timestamped list  
-  -- of 'BBChord's 
-  interp :: [TimedData [BBChord]] -> [TimedData BBChord]
-  interp = concatMap interpolate where
-  
-    -- splits a one 'TimedData [BBChord]' into multiple instances interpolating
-    -- the off an onsets by evenly dividing the time for every beat.
-    interpolate :: TimedData [BBChord] -> [TimedData BBChord]
-    interpolate (TimedData dat on off) = 
-      let -- gbc = groupByChord dat
-          bt  = (off - on) / genericLength dat
-      in  zipWith3 TimedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
+-- interpolates the on- and offset for every 'BBChord' in a timestamped list  
+-- of 'BBChord's 
+interp :: [TimedData [BBChord]] -> [TimedData BBChord]
+interp = concatMap interpolate . fixOddLongBeats where
 
--- setBeatIx :: [TimedData [BBChord]] -> [TimedData [BBChord]]
--- setBeatIx tcs = start : zipWith setIx [0, getNrOfBeats ts, ..] (reverse rest) ++ [end] where
-  -- -- strip the first and the last None chords
-  -- (start : rest    ) = tcs
-  -- (end   : revrest ) = reverse rest'
+  -- splits a 'TimedData [BBChord]' into multiple instances interpolating
+  -- the off an onsets by evenly dividing the time for every beat.
+  interpolate :: TimedData [BBChord] -> [TimedData BBChord]
+  interpolate (TimedData dat on off) = 
+    let bt  = (off - on) / genericLength dat
+    in  zipWith3 TimedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
+
+      
+avgBeatLen :: [TimedData [BBChord]] -> Double
+avgBeatLen l = (sum . map avg $ l) / genericLength l where
+  avg (TimedData dat on off) = (off - on) / genericLength dat 
+
+
+-- We discovered that the 'Billboard.Tests.oddBeatLengthTest' failed at quite
+-- some songs. The reason of failure is often caused by the /silence/ 
+-- timestamps at the beginning and end of a song. Probably, the annotators 
+-- marked /silence/ when there was really not much to hear any more. 
+-- This, however, is a problem: apparently there is a discrepancy between the 
+-- last musical beat of a song and the actual silence that clearly distorts 
+-- the 'interp'olation of the last line of annotated chords. Hence, we 
+-- use a different kind of interpolation for this last line of chords. We use 
+-- the average beat length of the previous line to predict the beat durations 
+-- of the chords and fill the \gap\ between the last chord and the \silence\ 
+-- annotation with additional 'N' chords.
+fixOddLongBeats ::[TimedData [BBChord]] -> [TimedData [BBChord]]
+fixOddLongBeats cs = evalState (mapM fixOddLongLine cs) avgBt  where
+
+  avgBt  = avgBeatLen cs 
+  totLen = offset . last $ cs
+    
+  fixOddLongLine :: TimedData [BBChord] -> State Double (TimedData [BBChord])
+  fixOddLongLine td@(TimedData dat on off) = 
+     do prvBt <- get
+        let curBt = (off - on) / genericLength dat
+            r = case (curBt >= ((1 + acceptableBeatDeviationMultiplier) * avgBt)
+                     , on < (totLen * 0.5) ) 
+                of -- odd beat length in the first halve of the song
+                   (True, True ) -> fmap (replicateNone prvBt td ++) td
+                   -- odd beat length in the second halve of the song
+                   (True, False) -> fmap (++ replicateNone prvBt td) td
+                   -- No odd beat length
+                   (False, _   ) -> td
+        -- replace the average beat length of the previous line 
+        -- with the average of the current line
+        modify (const curBt) 
+        return r
   
--- setIx :: Int -> TimedData [BBChord] -> TimedData [BBChord]
--- setIx ix tdrc = 
+  -- fills the "gap" with none chords
+  replicateNone :: Double -> TimedData [BBChord] -> [BBChord]
+  replicateNone prvBeat (TimedData dat on off) = 
+    -- calculate the number of beats expected, minus the chords in the list
+    let nrN  = (round ((off - on) / prvBeat)) - (length dat) 
+    -- annotate that this is an interpolated N list
+    in addLabel (Anno InterpolationInsert) (replicate nrN noneBBChord)
 
 --------------------------------------------------------------------------------
 -- Chord sequence data parsers
@@ -395,18 +435,22 @@ markBarStart []    = []
 markBarStart (h:t) = h {weight = Bar} : t
   
 -- within a bar there can be one chord, two chords (representing the sounding
--- chord in the first and second halve of the bar) and multiple chords and there
+-- chord in the first and second halve of the bar), multiple chords, and 
 -- repetitons marked with a '.'
 updateRep :: TimeSig -> [BBChord] -> [BBChord]
-updateRep _                [ ]      = error "updateRep: no chords to update"
-updateRep (TimeSig (n,_d)) [c]      = replChord n c 
-updateRep (TimeSig (n,_d)) [c1, c2] = let t = n `div` 2 
-                                      in  replChord t c1 ++ replChord t c2
-updateRep _                cs       = update cs
+updateRep _  [ ]      = error "updateRep: no chords to update"
+updateRep ts [c]      = replChord (beatsPerBar ts) c          -- one chord
+updateRep ts [c1, c2] = let t = (beatsPerBar ts) `div` 2      -- two chords
+                        in  replChord t c1 ++ replChord t c2    
+updateRep _  cs       = update cs                             -- multiple chords
+  -- updates the repetited chords ('.')
   where update :: [BBChord] -> [BBChord]
         update [ ]    = [ ]
         update [x]    = [x]
         update (x:y:xs) = case weight y of
+          -- Because at parsing time we do not know which chord is repeated 
+          -- by a '.' we replact the chord in the 'BBChord' by previous chord
+          -- (at parsing time a None chord is stored in the BBchord)
           Beat   -> x : update (y {chord = chord x}: xs)
           Change -> x : update (y : xs)
           _      -> error "update: unexpected beat weigth" -- cannot happen
