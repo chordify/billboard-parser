@@ -449,8 +449,8 @@ updateRep _  cs       = update cs                             -- multiple chords
         update [x]    = [x]
         update (x:y:xs) = case weight y of
           -- Because at parsing time we do not know which chord is repeated 
-          -- by a '.' we replact the chord in the 'BBChord' by previous chord
-          -- (at parsing time a None chord is stored in the BBchord)
+          -- by a '.' we replace the chord in the 'BBChord' by the previous 
+          -- chord (at parsing time a None chord is stored in the BBchord)
           Beat   -> x : update (y {chord = chord x}: xs)
           Change -> x : update (y : xs)
           _      -> error "update: unexpected beat weigth" -- cannot happen
