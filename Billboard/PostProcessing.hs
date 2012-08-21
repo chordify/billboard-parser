@@ -19,7 +19,7 @@ import Billboard.BillboardData
 --------------------------------------------------------------------------------
 
 acceptableBeatDeviationMultiplier :: Double
-acceptableBeatDeviationMultiplier = 0.25
+acceptableBeatDeviationMultiplier = 0.10
 
 --------------------------------------------------------------------------------
 -- Top level function
