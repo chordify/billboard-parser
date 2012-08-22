@@ -21,7 +21,7 @@ module Billboard.BillboardData ( BBChord (..), isChange, hasAnnotations
                                , BillboardData (..), Artist, Title, Meta (..)
                                , getBBChords, filterNoneChords
                                , addStart, addEnd, addLabel, addStartEnd
-                               , showInMIREXFormat
+                               , showInMIREXFormat, isEndOrBegin
                                ) where
 
 -- HarmTrace stuff

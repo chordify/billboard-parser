@@ -61,7 +61,7 @@ data Description = Chorus  | Intro | Outro | Bridge  | Interlude | Solo
                  | Secondarytheme   | Ending    | PhraseTrans | Instrumental 
                  | Coda    | Transition | PreVerse   | Vocal  | Talking 
                  | TalkingEnd | Silence | Applause | Noise | SongEnd
-                 | ModulationSeg
+                 | ModulationSeg | PreIntro
                  | Repeat Int
                  | Verse  (Maybe Int)
                  -- | a chord inserted by the posprocessing interpolation
@@ -108,7 +108,7 @@ isBeginOrEndAnno a = case getLabel a of
   (Anno Applause  ) -> True  
   (Anno TalkingEnd) -> True  
   (Anno Fadeout   ) -> True  
-  (Anno Intro     ) -> True
+  (Anno PreIntro  ) -> True
   _                 -> False
   
 -- | Returns True if the 'Annotation' represents a repeat.

@@ -320,10 +320,13 @@ avgBeatLen l = (sum . map avg $ l) / genericLength l where
 -- of the chords and fill the \gap\ between the last chord and the \silence\ 
 -- annotation with additional 'N' chords.
 fixOddLongBeats ::[TimedData [BBChord]] -> [TimedData [BBChord]]
-fixOddLongBeats cs = evalState (mapM fixOddLongLine cs) avgBt  where
+fixOddLongBeats song = sil ++ evalState (mapM fixOddLongLine cs) avgBt  where
 
-  avgBt  = avgBeatLen cs 
-  totLen = offset . last $ cs
+  -- separate the lines containing silence N chords at the beginning
+  -- from the lines that contain musical chords
+  (sil,cs) = break (or . map (not . isEndOrBegin) . getData) song
+  avgBt    = avgBeatLen cs        -- precalculate the average beat length
+  totLen   = offset . last $ cs   -- and the total length of the song
     
   fixOddLongLine :: TimedData [BBChord] -> State Double (TimedData [BBChord])
   fixOddLongLine td@(TimedData dat on off) = 
@@ -414,7 +417,8 @@ pSilence = Anno <$> (Silence    <$ pString "silence"
                 <|>  Applause   <$ pString "applause"
                 <|>  TalkingEnd <$ pString "talking" 
                 <|>  Fadeout    <$ pString "fadeout" 
-                <|>  Intro  <$ pString "pre" <* pMabSpcDsh  <* pString "intro")
+                <|>  PreIntro   <$ pString "pre" <* pMabSpcDsh  
+                                                 <* pString "intro")
                                                   
 -- parses the end of a song
 pSongEnd :: Parser BBChord
