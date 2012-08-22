@@ -30,7 +30,7 @@ import Billboard.IOUtils
 --------------------------------------------------------------------------------
 
 acceptableBeatDeviationMultiplier :: Double
-acceptableBeatDeviationMultiplier = 0.25
+acceptableBeatDeviationMultiplier = 0.04
  
 --------------------------------------------------------------------------------
 -- Top level testing functions
