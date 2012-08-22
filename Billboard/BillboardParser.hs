@@ -135,7 +135,7 @@ pAnnotation =   Chorus         <$ pString "chorus"<* pMabSpcDsh <* pMaybe pLower
             <|> Outro          <$ pString "outro"
             <|> Bridge         <$ pString "bridge"
             <|> Interlude      <$ pString "interlude" 
-            <|> Transistion    <$ pString "trans"<* pMaybe (pString "ition" )
+            <|> Transition     <$ pString "trans"<* pMaybe (pString "ition" )
             <|> Fadeout        <$ pString "fade" <* pMabSpc <* pString "out" 
             <|> Fadein         <$ pString "fade" <* pMabSpc <* pString "in" 
             <|> Solo           <$ pString "solo" 
@@ -149,6 +149,7 @@ pAnnotation =   Chorus         <$ pString "chorus"<* pMabSpcDsh <* pMaybe pLower
             <|> Coda           <$ pString "coda"
             <|> Ending         <$ pString "ending"
             <|> Talking        <$ pString "spoken" <* pMaybe (pString " verse")
+            <|> ModulationSeg  <$ pString "modulation"
 
 pTextNr :: Parser Int
 pTextNr =   1 <$ pString "one"
@@ -220,8 +221,8 @@ pInstrument =   Guitar         <$ pString "guitar"
                                                         <|> pString "s")
             <|> SteelDrum      <$ pString "steel " <*  (pString "drum"
                                <|>  pString "pan") <* pMaybe (pSym 's')
-            <|> Trumpet        <$ pString "trumpet"
-            <|> Vibraphone        <$ pString "vibraphone"
+            <|> Trumpet        <$ pString "trumpet" <* pMaybe (pSym 's')
+            <|> Vibraphone     <$ pString "vibraphone"
             <|> Piano          <$ pString "piano"
             <|> Harmonica      <$ pString "harmonica"
             <|> Organ          <$ pString "organ"
@@ -230,7 +231,7 @@ pInstrument =   Guitar         <$ pString "guitar"
             <|> Trombone       <$ pString "trombone"
             <|> Electricsitar  <$ pString "electric"<* pMabSpc <* pString "sitar"
             <|> Pennywhistle   <$ pString "pennywhistle"
-            <|> Tenorsaxophone <$ pString "tenor" <* pMabSpc <* pString"saxophone"
+            <|> Tenorsaxophone <$ pString "tenor" <* pMabSpc <* pString "saxophone"
             <|> Whistle        <$ pString "whistle"
             <|> Oboe           <$ pString "oboe"
             <|> Tambura        <$ pString "tambura"
@@ -247,6 +248,12 @@ pInstrument =   Guitar         <$ pString "guitar"
             <|> Acousticguitar <$ pString "acoustic" <* pMabSpc <* pString "guitar"
             <|> Bassguitar     <$ pString "bass" <* pMaybe (pString " guitar")
             <|> Bongos         <$ pString "bongos"
+            <|> Horn           <$ pString "horn"
+            <|> Sitar          <$ pString "sitar"
+            <|> Barisaxophone  <$ pString "baritone" <* pMabSpc <* pString "saxophone"
+            <|> Accordion      <$ pString "accordion"
+            <|> Tambourine     <$ pString "tambourine"
+            <|> Kazoo          <$ pString "kazoo"
 
 pUnknownInstr :: Parser Instrument
 pUnknownInstr = UnknownInstr <$> pList1 pLower

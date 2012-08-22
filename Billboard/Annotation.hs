@@ -47,8 +47,9 @@ data Instrument = Guitar | Voice | Violin   | Banjo | Synthesizer | Saxophone
                 | Tenorsaxophone | Whistle  | Oboe  | Tambura | Horns | Clarinet
                 | Electricguitar | Tenorhorn | Percussion | Rhythmguitar 
                 | Hammondorgan   | Harpsichord | Cello    | Acousticguitar
-                | Bassguitar     | Strings   | SteelDrum  | Vibraphone | Bongos
-                | Steelguitar    
+                | Bassguitar     | Strings  | SteelDrum   | Vibraphone | Bongos
+                | Steelguitar    | Horn     | Sitar | Barisaxophone | Accordion
+                | Tambourine     | Kazoo
                 | UnknownInstr String -- ^ a catch all description for 
                                       -- unrecognised instruments
        deriving (Show, Eq)
@@ -57,7 +58,8 @@ data Instrument = Guitar | Voice | Violin   | Banjo | Synthesizer | Saxophone
 data Description = Chorus  | Intro | Outro | Bridge  | Interlude | Solo
                  | Fadeout | Fadein | Prechorus | Maintheme   | Keychange 
                  | Secondarytheme   | Ending    | PhraseTrans | Instrumental 
-                 | Coda    | Transistion | PreVerse   |Vocal  | Talking
+                 | Coda    | Transition | PreVerse   | Vocal  | Talking
+                 | ModulationSeg
                  | Repeat Int
                  | Verse  (Maybe Int)
                  -- | a chord inserted by the posprocessing interpolation
