@@ -146,6 +146,15 @@ getBBChords = map getData . getSong
 -- | Shows the 'BillboardData' in MIREX format
 showInMIREXFormat :: BillboardData -> String
 showInMIREXFormat = concatMap showMIREX . getSong where
+
   showMIREX :: TimedData BBChord ->  String
   showMIREX c = show (onset c) ++ '\t' : show (offset c) 
-                               ++ '\t' : (show . chord . getData $ c) ++ "\n"
+                               ++ '\t' : (mirexBBChord . getData $ c) ++ "\n"
+                               
+  -- Categorises a chord as Major or Minor and shows it in Harte et al. syntax
+  mirexBBChord :: BBChord -> String
+  mirexBBChord bbc = let c = chord bbc 
+                     in case (isNoneBBChord bbc, toMode (chordShorthand c)) of
+                          (True , _      ) -> "N"
+                          (False, MajMode) -> show (chordRoot c) ++ ":maj"
+                          (False, MinMode) -> show (chordRoot c) ++ ":min"
