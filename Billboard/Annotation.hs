@@ -60,7 +60,7 @@ data Description = Chorus  | Intro | Outro | Bridge  | Interlude | Solo
                  | Fadeout | Fadein | Prechorus | Maintheme   | Keychange 
                  | Secondarytheme   | Ending    | PhraseTrans | Instrumental 
                  | Coda    | Transition | PreVerse   | Vocal  | Talking 
-                 | TalkingEnd | Silence | Applause | Noise
+                 | TalkingEnd | Silence | Applause | Noise | SongEnd
                  | ModulationSeg
                  | Repeat Int
                  | Verse  (Maybe Int)

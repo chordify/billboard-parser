@@ -20,7 +20,7 @@ module Billboard.BillboardData ( BBChord (..), isChange, hasAnnotations
                                , isStructSegStart, isNoneBBChord, noneBBChord
                                , BillboardData (..), Artist, Title, Meta (..)
                                , getBBChords, filterNoneChords
-                               , addStart, addEnd, addLabel
+                               , addStart, addEnd, addLabel, addStartEnd
                                , showInMIREXFormat
                                ) where
 
@@ -128,9 +128,13 @@ hasAnnotations = not . null . annotations
 addStart :: Label -> BBChord -> BBChord
 addStart lab chrd = chrd { annotations = Start lab : annotations chrd }
 
--- | Adds a end point of an 'Annotation' 'Label' to a 'BBChord'
+-- | Adds an end point of an 'Annotation' 'Label' to a 'BBChord'
 addEnd :: Label -> BBChord -> BBChord
 addEnd lab chrd = chrd { annotations = End lab : annotations chrd }
+
+-- | Adds both a start and an end 'Annotation' 'Label' to a 'BBChord'
+addStartEnd :: Label -> BBChord -> BBChord
+addStartEnd lab c = c { annotations = Start lab : End lab : annotations c }
 
 -- | Annotates a sequence of 'BBChord's by adding a Start 'Label' 'Annotation'
 -- at the first chord and an End 'Label' 'Annotation' at the last chord. The
