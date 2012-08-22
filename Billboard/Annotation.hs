@@ -58,7 +58,8 @@ data Instrument = Guitar | Voice | Violin   | Banjo | Synthesizer | Saxophone
 data Description = Chorus  | Intro | Outro | Bridge  | Interlude | Solo
                  | Fadeout | Fadein | Prechorus | Maintheme   | Keychange 
                  | Secondarytheme   | Ending    | PhraseTrans | Instrumental 
-                 | Coda    | Transition | PreVerse   | Vocal  | Talking
+                 | Coda    | Transition | PreVerse   | Vocal  | Talking 
+                 | TalkingEnd | Silence | Applause | Noise
                  | ModulationSeg
                  | Repeat Int
                  | Verse  (Maybe Int)

@@ -396,20 +396,25 @@ setAnnotations d srt chords end =
         updateLast f [x]    = [f x]
         updateLast f (x:xs) = x : updateLast f xs
 
--- Recognises the "Z" character      
+-- Recognises the "Z" character, and several silence annotations. If silence 
+-- (see pSilence) is explicitly annotated the annotation is also stored in the
+-- outputed N chord label.   
 pZSilence :: Parser BBChord  
-pZSilence = noneBBChord <$ (pString "Z" <* pPrimes 
-                                        <* pMaybe (pString ", " *> pSilence)
-                        <|> pSilence)   
+pZSilence = endChord <$> 
+      ((pString "Z" <* pPrimes) *> pMaybe (pString ", " *> pSilence)
+      <|> Just <$> pSilence) where
+  -- if there are silence annotations add them to a N chord
+  endChord :: Maybe Label -> BBChord
+  endChord = maybe noneBBChord (\l -> addStart l . addEnd l $ noneBBChord)  
   
 -- recognises a "silence" annotation, no chords are sounding
-pSilence :: Parser String
-pSilence =   pString "silence" 
-         <|> pString "noise"
-         <|> pString "applause"
-         <|> pString "talking" 
-         <|> pString "fadeout" 
-         <|> pString "pre" <* pMabSpcDsh  <* pString "intro"
+pSilence :: Parser Label
+pSilence = Anno <$> (Silence  <$ pString "silence" 
+                <|>  Noise    <$ pString "noise"
+                <|>  Applause <$ pString "applause"
+                <|>  Talking  <$ pString "talking" 
+                <|>  Fadeout  <$ pString "fadeout" 
+                <|>  Intro    <$ pString "pre" <* pMabSpcDsh  <* pString "intro")
                                                   
 -- parses the end of a song
 pSongEnd :: Parser BBChord
