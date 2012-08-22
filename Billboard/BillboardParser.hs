@@ -43,7 +43,7 @@ import Billboard.Annotation (  Annotation (..), Label (..)
 --------------------------------------------------------------------------------
 
 acceptableBeatDeviationMultiplier :: Double
-acceptableBeatDeviationMultiplier = 0.25
+acceptableBeatDeviationMultiplier = 0.1
 
 --------------------------------------------------------------------------------
 -- Top level Billboard parsers
