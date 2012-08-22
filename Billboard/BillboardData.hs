@@ -30,7 +30,7 @@ import HarmTrace.Audio.ChordTypes (TimedData (..), getData, onset, offset)
 
 import Billboard.BeatBar
 import Billboard.Annotation ( Annotation (..), isStart, isStruct
-                            , getLabel, Label)
+                            , getLabel, Label, isBeginOrEndAnno)
 
 import Data.List (partition)
 
@@ -114,6 +114,11 @@ filterNoneChords = filter (not . isNoneBBChord)
 -- and no shorthand
 isNoneBBChord :: BBChord -> Bool
 isNoneBBChord = isNoneChord . chord
+
+isEndOrBegin :: BBChord -> Bool
+isEndOrBegin bbc = let c = chord bbc 
+                   in isNoneChord c 
+                   && (or . map isBeginOrEndAnno . annotations $ bbc)
   
 -- | Returns True if the 'BBChord' has any 'Boundary's and false otherwise
 hasAnnotations :: BBChord -> Bool

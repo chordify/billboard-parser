@@ -409,12 +409,12 @@ pZSilence = endChord <$>
   
 -- recognises a "silence" annotation, no chords are sounding
 pSilence :: Parser Label
-pSilence = Anno <$> (Silence  <$ pString "silence" 
-                <|>  Noise    <$ pString "noise"
-                <|>  Applause <$ pString "applause"
-                <|>  Talking  <$ pString "talking" 
-                <|>  Fadeout  <$ pString "fadeout" 
-                <|>  Intro    <$ pString "pre" <* pMabSpcDsh  <* pString "intro")
+pSilence = Anno <$> (Silence    <$ pString "silence" 
+                <|>  Noise      <$ pString "noise"
+                <|>  Applause   <$ pString "applause"
+                <|>  TalkingEnd <$ pString "talking" 
+                <|>  Fadeout    <$ pString "fadeout" 
+                <|>  Intro  <$ pString "pre" <* pMabSpcDsh  <* pString "intro")
                                                   
 -- parses the end of a song
 pSongEnd :: Parser BBChord

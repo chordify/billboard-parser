@@ -15,7 +15,8 @@
 
 module Billboard.Annotation ( Annotation (..), Label (..), isStruct
                 , isStart, Instrument (..), Description (..)
-                ,  isUnknown, getLabel, isRepeat, getRepeats) where
+                , isUnknown, getLabel, isRepeat, getRepeats
+                , isBeginOrEndAnno) where
 
 import HarmTrace.Base.MusicRep (Root)
 
@@ -97,6 +98,19 @@ isUnknown s = case (getLabel s) of
   (Anno  (UnknownAnno  _ )) -> True
   _                         -> False
 
+-- | Returns True if the 'Annotation' belongs to the set of 'Annotation's that
+-- is typically found at the beginning and end of a piece. (This should hold 
+-- for the complete Billboard dataset)
+isBeginOrEndAnno :: Annotation -> Bool
+isBeginOrEndAnno a = case getLabel a of
+  (Anno Silence   ) -> True
+  (Anno Noise     ) -> True
+  (Anno Applause  ) -> True  
+  (Anno TalkingEnd) -> True  
+  (Anno Fadeout   ) -> True  
+  (Anno Intro     ) -> True
+  _                 -> False
+  
 -- | Returns True if the 'Annotation' represents a repeat.
 isRepeat :: Annotation -> Bool
 isRepeat (End (Anno (Repeat _))) = True
