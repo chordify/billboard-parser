@@ -154,7 +154,13 @@ showInMIREXFormat = concatMap showMIREX . getSong where
   -- Categorises a chord as Major or Minor and shows it in Harte et al. syntax
   mirexBBChord :: BBChord -> String
   mirexBBChord bbc = let c = chord bbc 
-                     in case (isNoneBBChord bbc, toMode (chordShorthand c)) of
-                          (True , _      ) -> "N"
-                          (False, MajMode) -> show (chordRoot c) ++ ":maj"
-                          (False, MinMode) -> show (chordRoot c) ++ ":min"
+                     in case (chordRoot c, chordShorthand c) of
+                          ((Note _ N), None ) -> "N"
+                          -- for X:1 containing only the root note... 
+                          (r         , None ) -> show r ++ ":maj"
+                          (r         , sh   ) -> show r ++ showShortHand sh
+  
+  -- transforms a short hand into maj/min
+  showShortHand :: Shorthand -> String
+  showShortHand sh = case (toMode sh) of MajMode -> ":maj"
+                                         MinMode -> ":min"

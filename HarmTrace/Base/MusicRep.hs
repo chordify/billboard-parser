@@ -151,9 +151,10 @@ noneLabel :: ChordLabel
 noneLabel = (Chord (Note Nothing N) None [] 0 0)
 
 isNoneChord :: ChordLabel -> Bool
-isNoneChord (Chord (Note _ N) _ _ _ _) = True
-isNoneChord (Chord _ None _ _ _)       = True
-isNoneChord _                          = False
+-- isNoneChord (Chord (Note _ N) _ _ _ _) = True
+-- since billboard this is not the case anymore.... there can be D:1 
+isNoneChord (Chord (Note _ N) None _ _ _) = True
+isNoneChord _                             = False
 
 toClassType :: Shorthand -> ClassType
 toClassType sh 
