@@ -24,7 +24,7 @@ import Data.List (genericLength, partition)
 import Control.Arrow (first)
 import Control.Monad.State
 import Text.ParserCombinators.UU
-import Data.Either (lefts)
+-- import Data.Either (lefts)
 
 import HarmTrace.Base.Parsing hiding (pLineEnd)
 import HarmTrace.Base.MusicRep hiding (isNone)
@@ -58,7 +58,7 @@ parseBillboard = parseDataWithErrors pBillboard
 -- | The top-level parser for parsing the billboard data (see 'parseBillboard').
 pBillboard :: Parser BillboardData
 pBillboard = do (a, t, ts, r) <- pHeader
-                c             <- pChordLines ts
+                c             <- pChordLinesPost ts
                 return (BillboardData a t ts r c)
              
 --------------------------------------------------------------------------------
@@ -275,21 +275,42 @@ pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 --------------------------------------------------------------------------------
 
 -- Top-level parser for parsing chords sequence lines an annotations
-pChordLines :: TimeSig -> Parser [TimedData BBChord]
-pChordLines ts =  (interp . setTiming . lefts) 
-               <$> pListSep_ng pLineEnd (pLine ts) <*  pLineEnd where
+-- pChordLinesPost :: TimeSig -> Parser [TimedData BBChord]
+-- pChordLinesPost ts =  (interp . setTiming . lefts) 
+               -- <$> pListSep_ng pLineEnd (pLine ts) <*  pLineEnd where
+
+pChordLinesPost :: TimeSig -> Parser [TimedData BBChord]
+pChordLinesPost ts = (interp . setTiming) <$> pChordLines' ts 
                
-  -- labels every line with the corresponding starting and ending times (where
-  -- the end time is actually the start time of the next chord line)
-  setTiming :: [(Double, a)] -> [TimedData a]
-  setTiming [ ] = []
-  setTiming [_] = [] -- remove the end 
-  setTiming (a : b : cs) = TimedData (snd a) (fst a) (fst b) : setTiming (b:cs)
+pChordLines' :: TimeSig -> Parser [(Double, [BBChord])]
+pChordLines' ts = pSilenceEndLine *>  
+                  pLineEnd *> pSilenceEndLine *>(pChordLines ts) -- <*> pure []
+               
+pChordLines :: TimeSig -> Parser [(Double, [BBChord])]
+pChordLines ts = do p <- pLine ts
+                    r <- case p of
+                          (Left  t            ) -> concatLines t
+                          (Right (Metre newTs)) -> pChordLines newTs 
+                          (Right _            ) -> pChordLines ts
+                    return r where
+
+  concatLines :: (Double, [BBChord]) -> Parser [(Double, [BBChord])]
+  concatLines t = case isEndOrBegin . head . snd $ t of
+                    True  -> (t :) <$> pure [] <* pLineEnd <* pSilenceEndLine <* pLineEnd
+                    False -> (t :) <$> pChordLines ts 
 
 -- Parses one line which can be chords, meta information, or end/silence
 pLine :: TimeSig -> Parser (Either (Double, [BBChord]) Meta)         
-pLine ts = pChordLine ts <|> pSilenceEndLine <|> pMetaChange  
-  
+pLine ts = pLineEnd *> (pChordLine ts <|> pSilenceEndLine <|> pMetaChange) -- <* pLineEnd
+
+
+-- labels every line with the corresponding starting and ending times (where
+-- the end time is actually the start time of the next chord line)
+setTiming :: [(Double, a)] -> [TimedData a]
+setTiming [ ] = []
+setTiming [_] = [] -- remove the end 
+setTiming (a : b : cs) = TimedData (snd a) (fst a) (fst b) : setTiming (b:cs)
+
 -- interpolates the on- and offset for every 'BBChord' in a timestamped list  
 -- of 'BBChord's 
 interp :: [TimedData [BBChord]] -> [TimedData BBChord]
