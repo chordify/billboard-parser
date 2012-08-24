@@ -37,6 +37,7 @@ import Billboard.Annotation (  Annotation (..), Label (..)
                             , isRepeat, getRepeats)
 
 -- import Debug.Trace
+
 --------------------------------------------------------------------------------
 -- Constants
 --------------------------------------------------------------------------------
@@ -287,7 +288,7 @@ setTiming (a : b : cs) = TimedData (snd a) (fst a) (fst b) : setTiming (b:cs)
 -- interpolates the on- and offset for every 'BBChord' in a timestamped list  
 -- of 'BBChord's 
 interp :: [TimedData [BBChord]] -> [TimedData BBChord]
-interp = concatMap interpolate . fixOddLongBeats where
+interp = concatMap interpolate . fixBothBeatDev where
 
   -- splits a 'TimedData [BBChord]' into multiple instances interpolating
   -- the off an onsets by evenly dividing the time for every beat.
@@ -296,6 +297,14 @@ interp = concatMap interpolate . fixOddLongBeats where
     let bt  = (off - on) / genericLength dat
     in  zipWith3 TimedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
 
+fixForward, fixBackward, fixBothBeatDev :: [TimedData [BBChord]] 
+                                        -> [TimedData [BBChord]]
+fixBothBeatDev = fixBackward . fixForward
+fixForward     = fixOddLongBeats Forward acceptableBeatDeviationMultiplier
+fixBackward    = reverse . fixOddLongBeats Backward acceptableBeatDeviationMultiplier . reverse
+
+data Direction = Forward | Backward
+    
 -- We discovered that the 'Billboard.Tests.oddBeatLengthTest' failed at quite
 -- some songs. The reason of failure is often caused by the /silence/ 
 -- timestamps at the beginning and end of a song. Probably, the annotators 
@@ -307,26 +316,34 @@ interp = concatMap interpolate . fixOddLongBeats where
 -- the average beat length of the previous line to predict the beat durations 
 -- of the chords and fill the \gap\ between the last chord and the \silence\ 
 -- annotation with additional 'N' chords.
-fixOddLongBeats ::[TimedData [BBChord]] -> [TimedData [BBChord]]
-fixOddLongBeats song = sil ++ fixOddLongLine cs  where
+fixOddLongBeats :: Direction -> Double -> [TimedData [BBChord]] -> [TimedData [BBChord]]
+fixOddLongBeats dir beatDev song = sil ++ fixOddLongLine cs  where
 
   -- separate the lines containing silence N chords at the beginning
   -- from the lines that contain musical chords
   (sil,cs) = break (and . map (not . isNoneBBChord) . getData) song
   -- precalculate the average beat length, filtering lines that contain
   -- none harmonic data (in the from of N chords)
-  avgBt    = avgBeatLens . filter (and . map (not . isNoneBBChord) . getData ) $ cs        
-  -- totLen   = offset . last $ cs   -- and the total length of the song
+  avgBt = avgBeatLens . filter (and . map (not . isNoneBBChord) . getData ) $ cs        
     
   fixOddLongLine :: [TimedData [BBChord]] -> [TimedData [BBChord]]
   fixOddLongLine (l : n : ls ) = 
-    case avgBeatLen l >= (1 + acceptableBeatDeviationMultiplier * avgBt) of
-      -- True  -> trace ("update:" ++ show l) x where x = fmap (++ replicateNone (avgBeatLen n) l) l : n : ls
-      -- False -> traceShow l (                             l : n : ls)
-      True  -> fmap (replicateNone (avgBeatLen n) l ++) l : n : ls
-      False ->                                          l : n : ls
+    case (avgBeatLen l >= ((1 + beatDev) * avgBt), dir) of
+      -- (True, Forward)  -> trace ("forward:(" ++ show (avgBeatLen l) ++ ">=" 
+                                   -- ++ show ((1 + beatDev) * avgBt) ++ "): " 
+                                   -- ++ show l)
+                                -- (fmap (++ replicateNone (avgBeatLen n) l) l : n : ls)
+      -- (True, Backward) -> trace ("backward:(" ++ show (avgBeatLen l) ++ ">=" 
+                                   -- ++ show ((1 + beatDev) * avgBt) ++ "): " 
+                                   -- ++ show l)
+                                -- (fmap (++ replicateNone (avgBeatLen n) l) l : n : ls)
+      -- (False, _      ) -> trace ("nochange (" ++ show (avgBeatLen l) ++ ">=" 
+                                   -- ++ show ((1 + beatDev) * avgBt) ++ "): " 
+                                   -- ++ show l)  (  l : n : ls)
+      (True, Forward ) -> fmap (replicateNone (avgBeatLen n) l ++) l : n : ls
+      (True, Backward) -> fmap (++ replicateNone (avgBeatLen n) l) l : n : ls
+      (False, _      ) ->                                          l : n : ls
   fixOddLongLine l             = l
- 
   
   -- fills the "gap" with none chords
   replicateNone :: Double -> TimedData [BBChord] -> [BBChord]
