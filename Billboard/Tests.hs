@@ -53,7 +53,7 @@ mainTestDir fp = getBBFiles fp >>= mapM readParse >>=
 -- | Tests the all beat lengths in a song and reports per song. 
 oddBeatLengthTest :: (BillboardData, Int) -> Test
 oddBeatLengthTest (bbd, bbid) = 
-  let song                = getSong bbd
+  let song = filter (isNoneBBChord . getData ) . getSong $ bbd
       (_, minLen, maxLen) = getMinMaxBeatLen song
   in TestCase (assertBool ("odd Beat length detected for:\n" 
                           ++ show bbid ++ ": " ++ getTitle bbd)

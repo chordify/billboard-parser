@@ -16,7 +16,6 @@
 module Billboard.Annotation ( Annotation (..), Label (..), isStruct
                 , isStart, Instrument (..), Description (..)
                 , isUnknown, getLabel, isRepeat, getRepeats
-                -- , isNonHarmonicAnno
                 , isEndAnno) where
 
 import HarmTrace.Base.MusicRep (Root)

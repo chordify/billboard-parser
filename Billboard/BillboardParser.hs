@@ -22,7 +22,7 @@ module Billboard.BillboardParser ( parseBillboard
 
 import Data.List (genericLength, partition)
 import Control.Arrow (first)
-import Control.Monad.State
+-- import Control.Monad.State
 import Text.ParserCombinators.UU
 
 import HarmTrace.Base.Parsing hiding (pLineEnd)
@@ -36,6 +36,7 @@ import Billboard.Annotation (  Annotation (..), Label (..)
                             , Instrument (..), Description (..), isStart
                             , isRepeat, getRepeats)
 
+import Debug.Trace
 --------------------------------------------------------------------------------
 -- Constants
 --------------------------------------------------------------------------------
@@ -307,32 +308,23 @@ interp = concatMap interpolate . fixOddLongBeats where
 -- of the chords and fill the \gap\ between the last chord and the \silence\ 
 -- annotation with additional 'N' chords.
 fixOddLongBeats ::[TimedData [BBChord]] -> [TimedData [BBChord]]
-fixOddLongBeats song = sil ++ evalState (mapM fixOddLongLine cs) avgBt  where
+fixOddLongBeats song = sil ++ fixOddLongLine cs  where
 
   -- separate the lines containing silence N chords at the beginning
   -- from the lines that contain musical chords
   (sil,cs) = break (and . map (not . isNoneBBChord) . getData) song
   -- precalculate the average beat length, filtering lines that contain
   -- none harmonic data (in the from of N chords)
-  avgBt    = avgBeatLen . filter (and . map isNoneBBChord . getData ) $ cs        
-  totLen   = offset . last $ cs   -- and the total length of the song
+  avgBt    = avgBeatLens . filter (and . map isNoneBBChord . getData ) $ cs        
+  -- totLen   = offset . last $ cs   -- and the total length of the song
     
-  fixOddLongLine :: TimedData [BBChord] -> State Double (TimedData [BBChord])
-  fixOddLongLine td@(TimedData dat on off) = 
-     do prvBt <- get
-        let curBt = (off - on) / genericLength dat
-            r = case (curBt >= ((1 + acceptableBeatDeviationMultiplier) * avgBt)
-                     , on < (totLen * 0.5) ) 
-                of -- odd beat length in the first halve of the song
-                   (True, True ) -> fmap (replicateNone prvBt td ++) td
-                   -- odd beat length in the second halve of the song
-                   (True, False) -> fmap (++ replicateNone prvBt td) td
-                   -- No odd beat length
-                   (False, _   ) -> td
-        -- replace the average beat length of the previous line 
-        -- with the average of the current line
-        modify (const curBt) 
-        return r
+  fixOddLongLine :: [TimedData [BBChord]] -> [TimedData [BBChord]]
+  fixOddLongLine (l : n : ls ) = 
+    case avgBeatLen l >= (1 + acceptableBeatDeviationMultiplier * avgBt) of
+      True  -> trace ("update:" ++ show l) x where x = fmap (++ replicateNone (avgBeatLen n) l) l : n : ls
+      False -> traceShow l (                             l : n : ls)
+  fixOddLongLine l             = l
+ 
   
   -- fills the "gap" with none chords
   replicateNone :: Double -> TimedData [BBChord] -> [BBChord]
@@ -342,10 +334,13 @@ fixOddLongBeats song = sil ++ evalState (mapM fixOddLongLine cs) avgBt  where
     -- annotate that this is an interpolated N list
     in addLabel (Anno InterpolationInsert) (replicate nrN noneBBChord)
   
+  -- Calculates the average length of a beat in a list of Timed BBChords
+  avgBeatLens :: [TimedData [BBChord]] -> Double
+  avgBeatLens l = (sum . map avgBeatLen $ l) / genericLength l 
+  
   -- Calculates the average length of a beat
-  avgBeatLen :: [TimedData [BBChord]] -> Double
-  avgBeatLen l = (sum . map avg $ l) / genericLength l where
-    avg (TimedData dat on off) = (off - on) / genericLength dat   
+  avgBeatLen :: TimedData [BBChord] -> Double
+  avgBeatLen (TimedData dat on off) = (off - on) / genericLength dat   
     
 --------------------------------------------------------------------------------
 -- Chord sequence data parsers
