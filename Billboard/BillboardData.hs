@@ -21,7 +21,7 @@ module Billboard.BillboardData ( BBChord (..), isChange, hasAnnotations
                                , BillboardData (..), Artist, Title, Meta (..)
                                , getBBChords, filterNoneChords
                                , addStart, addEnd, addLabel, addStartEnd
-                               , showInMIREXFormat, isEndOrBegin, isEnd
+                               , showInMIREXFormat, isEnd
                                ) where
 
 -- HarmTrace stuff
@@ -30,7 +30,7 @@ import HarmTrace.Audio.ChordTypes (TimedData (..), getData, onset, offset)
 
 import Billboard.BeatBar
 import Billboard.Annotation ( Annotation (..), isStart, isStruct
-                            , getLabel, Label, isBeginOrEndAnno, isEndAnno)
+                            , getLabel, Label, isEndAnno)
 
 import Data.List (partition)
 
@@ -114,12 +114,6 @@ filterNoneChords = filter (not . isNoneBBChord)
 -- and no shorthand
 isNoneBBChord :: BBChord -> Bool
 isNoneBBChord = isNoneChord . chord
-
--- TODO: replace by isBegin, not matching on the end
-isEndOrBegin :: BBChord -> Bool
-isEndOrBegin bbc = let c = chord bbc 
-                   in isNoneChord c 
-                   && (or . map isBeginOrEndAnno . annotations $ bbc)
 
 -- Returns True if this 'BBChord' is the last (N) chord of the song
 isEnd :: BBChord -> Bool

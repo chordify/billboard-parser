@@ -311,8 +311,10 @@ fixOddLongBeats song = sil ++ evalState (mapM fixOddLongLine cs) avgBt  where
 
   -- separate the lines containing silence N chords at the beginning
   -- from the lines that contain musical chords
-  (sil,cs) = break (or . map (not . isEndOrBegin) . getData) song
-  avgBt    = avgBeatLen cs        -- precalculate the average beat length
+  (sil,cs) = break (and . map (not . isNoneBBChord) . getData) song
+  -- precalculate the average beat length, filtering lines that contain
+  -- none harmonic data (in the from of N chords)
+  avgBt    = avgBeatLen . filter (and . map isNoneBBChord . getData ) $ cs        
   totLen   = offset . last $ cs   -- and the total length of the song
     
   fixOddLongLine :: TimedData [BBChord] -> State Double (TimedData [BBChord])
@@ -372,7 +374,6 @@ pChordLines ts = do p <- pLine ts  -- parse one line
 -- Parses one line which can be chords, meta information, or end/silence
 pLine :: TimeSig -> Parser (Either (Double, [BBChord]) Meta)         
 pLine ts = (pChordLine ts <|> pSilenceLine <|> pMetaChange) <* pLineEnd
-
 
 -- parses a line annotated with "silence"
 pSilenceLine :: Parser (Either (Double, [BBChord]) Meta) 
