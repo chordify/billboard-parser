@@ -297,11 +297,16 @@ interp = concatMap interpolate . fixBothBeatDev where
     let bt  = (off - on) / genericLength dat
     in  zipWith3 TimedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
 
+-- The beat deviation occurs both at the beginning and at the end of piece,
+-- but the principle of correction is exactly the same (but mirrored). Hence
+-- 'fixForward' and 'fixBackward' both rely on 'fixOddLongBeats'
 fixForward, fixBackward, fixBothBeatDev :: [TimedData [BBChord]] 
                                         -> [TimedData [BBChord]]
 fixBothBeatDev = fixBackward . fixForward
-fixForward     = fixOddLongBeats Forward acceptableBeatDeviationMultiplier
-fixBackward    = reverse . fixOddLongBeats Backward acceptableBeatDeviationMultiplier . reverse
+fixForward     = fixOddLongBeats Forward 
+                 acceptableBeatDeviationMultiplier
+fixBackward    = reverse . fixOddLongBeats Backward  -- = reversed fix Forward
+                 acceptableBeatDeviationMultiplier . reverse
 
 data Direction = Forward | Backward
     
