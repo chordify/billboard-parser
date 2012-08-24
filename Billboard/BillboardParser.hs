@@ -36,7 +36,7 @@ import Billboard.BillboardData
 import Billboard.Annotation (  Annotation (..), Label (..)
                             , Instrument (..), Description (..), isStart
                             , isRepeat, getRepeats)
-                            
+import Debug.Trace
 
 --------------------------------------------------------------------------------
 -- Constants
@@ -48,6 +48,15 @@ acceptableBeatDeviationMultiplier = 0.075
 --------------------------------------------------------------------------------
 -- Top level Billboard parsers
 --------------------------------------------------------------------------------
+
+testshort :: IO()
+testshort =  do let c = "402.040408163\tsilence\n405.942857142\tend\n"
+                    (s, err) = parseDataWithErrors (show <$> pChordLines (TimeSig (4,4))) c
+                    -- (s, err) = parseDataWithErrors (show <$> pSilenceLine) c
+                print c
+                mapM_ print err
+                print s
+
 
 -- | Toplevel function for parsing Billboard data files. The function returns
 -- a tuple containing the result of the parsing in a 'BillboardData' type and
@@ -70,7 +79,7 @@ pHeader :: Parser (Title, Artist, TimeSig, Root)
 pHeader = sortMetas <$> (pMetaPrefix *> pTitle  ) <* pLineEnd <*>
                         (pMetaPrefix *> pArtist ) <* pLineEnd <*>
                         (pMetaPrefix *> pMeta   ) <* pLineEnd <*>
-                        (pMetaPrefix *> pMeta   ) <* pLineEnd <* pLineEnd where
+                        (pMetaPrefix *> pMeta   ) <* pLineEnd <*  pLineEnd where
                         
   sortMetas :: Title -> Artist -> Meta -> Meta -> (Title, Artist, TimeSig, Root)
   sortMetas t a (Metre  ts) (KeyRoot r) = (t, a, ts, r)
@@ -275,16 +284,8 @@ pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 --------------------------------------------------------------------------------
 
 -- Top-level parser for parsing chords sequence lines an annotations
--- pChordLinesPost :: TimeSig -> Parser [TimedData BBChord]
--- pChordLinesPost ts =  (interp . setTiming . lefts) 
-               -- <$> pListSep_ng pLineEnd (pLine ts) <*  pLineEnd where
-
 pChordLinesPost :: TimeSig -> Parser [TimedData BBChord]
-pChordLinesPost ts = (interp . setTiming) <$> pChordLines' ts 
-               
-pChordLines' :: TimeSig -> Parser [(Double, [BBChord])]
-pChordLines' ts = pSilenceEndLine *>  
-                  pLineEnd *> pSilenceEndLine *>(pChordLines ts) -- <*> pure []
+pChordLinesPost ts = (interp . setTiming) <$> pChordLines ts 
                
 pChordLines :: TimeSig -> Parser [(Double, [BBChord])]
 pChordLines ts = do p <- pLine ts
@@ -295,13 +296,13 @@ pChordLines ts = do p <- pLine ts
                     return r where
 
   concatLines :: (Double, [BBChord]) -> Parser [(Double, [BBChord])]
-  concatLines t = case isEndOrBegin . head . snd $ t of
-                    True  -> (t :) <$> pure [] <* pLineEnd <* pSilenceEndLine <* pLineEnd
+  concatLines t = case isEnd . head . snd $ t of
+                    True  -> (t :) <$> pure []
                     False -> (t :) <$> pChordLines ts 
 
 -- Parses one line which can be chords, meta information, or end/silence
 pLine :: TimeSig -> Parser (Either (Double, [BBChord]) Meta)         
-pLine ts = pLineEnd *> (pChordLine ts <|> pSilenceEndLine <|> pMetaChange) -- <* pLineEnd
+pLine ts = (pChordLine ts <|> pSilenceLine <|> pMetaChange) <* pLineEnd
 
 
 -- labels every line with the corresponding starting and ending times (where
@@ -379,10 +380,10 @@ fixOddLongBeats song = sil ++ evalState (mapM fixOddLongLine cs) avgBt  where
 --------------------------------------------------------------------------------
   
 -- parses a line annotated with "silence"
-pSilenceEndLine :: Parser (Either (Double, [BBChord]) Meta) 
-pSilenceEndLine = f <$> pDoubleRaw <* pSym '\t' <*> (pZSilence <|> pSongEnd) 
+pSilenceLine :: Parser (Either (Double, [BBChord]) Meta) 
+pSilenceLine = f <$> pDoubleRaw <* pSym '\t' <*> (pZSilence  <|> pSongEnd)
   where f a b = Left (a,[b])
-
+  
 -- parses a line with annotated chord sequence data
 pChordLine :: TimeSig -> Parser (Either (Double, [BBChord]) Meta)
 pChordLine ts = Left <$> (setAnnotations <$> pDoubleRaw <* pSym '\t'
@@ -443,7 +444,7 @@ pSilence = Anno <$> (Silence    <$ pString "silence"
                                                   
 -- parses the end of a song
 pSongEnd :: Parser BBChord
-pSongEnd = (flip addStartEnd) noneBBChord <$> ((Anno SongEnd) <$ pString "end")
+pSongEnd = (flip addEnd) noneBBChord <$> ((Anno SongEnd) <$ pString "end")
 
 -- recongnises a chord sequence like: 
 -- "| Db:maj Gb:maj/5 | Ab:maj Db:maj/5 | Bb:min Bb:min/b7 Gb:maj . | Ab:maj |\"
