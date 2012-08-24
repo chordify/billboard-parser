@@ -121,10 +121,10 @@ isEndOrBegin bbc = let c = chord bbc
                    in isNoneChord c 
                    && (or . map isBeginOrEndAnno . annotations $ bbc)
 
+-- Returns True if this 'BBChord' is the last (N) chord of the song
 isEnd :: BBChord -> Bool
 isEnd c = isNoneBBChord c && (or . map isEndAnno . annotations $ c )
 
-                   
 -- | Returns True if the 'BBChord' has any 'Boundary's and false otherwise
 hasAnnotations :: BBChord -> Bool
 hasAnnotations = not . null . annotations

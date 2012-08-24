@@ -24,7 +24,6 @@ import Data.List (genericLength, partition)
 import Control.Arrow (first)
 import Control.Monad.State
 import Text.ParserCombinators.UU
--- import Data.Either (lefts)
 
 import HarmTrace.Base.Parsing hiding (pLineEnd)
 import HarmTrace.Base.MusicRep hiding (isNone)
@@ -36,7 +35,6 @@ import Billboard.BillboardData
 import Billboard.Annotation (  Annotation (..), Label (..)
                             , Instrument (..), Description (..), isStart
                             , isRepeat, getRepeats)
-import Debug.Trace
 
 --------------------------------------------------------------------------------
 -- Constants
@@ -48,15 +46,6 @@ acceptableBeatDeviationMultiplier = 0.075
 --------------------------------------------------------------------------------
 -- Top level Billboard parsers
 --------------------------------------------------------------------------------
-
-testshort :: IO()
-testshort =  do let c = "402.040408163\tsilence\n405.942857142\tend\n"
-                    (s, err) = parseDataWithErrors (show <$> pChordLines (TimeSig (4,4))) c
-                    -- (s, err) = parseDataWithErrors (show <$> pSilenceLine) c
-                print c
-                mapM_ print err
-                print s
-
 
 -- | Toplevel function for parsing Billboard data files. The function returns
 -- a tuple containing the result of the parsing in a 'BillboardData' type and
@@ -286,24 +275,6 @@ pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 -- Top-level parser for parsing chords sequence lines an annotations
 pChordLinesPost :: TimeSig -> Parser [TimedData BBChord]
 pChordLinesPost ts = (interp . setTiming) <$> pChordLines ts 
-               
-pChordLines :: TimeSig -> Parser [(Double, [BBChord])]
-pChordLines ts = do p <- pLine ts
-                    r <- case p of
-                          (Left  t            ) -> concatLines t
-                          (Right (Metre newTs)) -> pChordLines newTs 
-                          (Right _            ) -> pChordLines ts
-                    return r where
-
-  concatLines :: (Double, [BBChord]) -> Parser [(Double, [BBChord])]
-  concatLines t = case isEnd . head . snd $ t of
-                    True  -> (t :) <$> pure []
-                    False -> (t :) <$> pChordLines ts 
-
--- Parses one line which can be chords, meta information, or end/silence
-pLine :: TimeSig -> Parser (Either (Double, [BBChord]) Meta)         
-pLine ts = (pChordLine ts <|> pSilenceLine <|> pMetaChange) <* pLineEnd
-
 
 -- labels every line with the corresponding starting and ending times (where
 -- the end time is actually the start time of the next chord line)
@@ -323,12 +294,6 @@ interp = concatMap interpolate . fixOddLongBeats where
   interpolate (TimedData dat on off) = 
     let bt  = (off - on) / genericLength dat
     in  zipWith3 TimedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
-
-      
-avgBeatLen :: [TimedData [BBChord]] -> Double
-avgBeatLen l = (sum . map avg $ l) / genericLength l where
-  avg (TimedData dat on off) = (off - on) / genericLength dat 
-
 
 -- We discovered that the 'Billboard.Tests.oddBeatLengthTest' failed at quite
 -- some songs. The reason of failure is often caused by the /silence/ 
@@ -374,11 +339,41 @@ fixOddLongBeats song = sil ++ evalState (mapM fixOddLongLine cs) avgBt  where
     let nrN  = (round ((off - on) / prvBeat)) - (length dat) 
     -- annotate that this is an interpolated N list
     in addLabel (Anno InterpolationInsert) (replicate nrN noneBBChord)
-
+  
+  -- Calculates the average length of a beat
+  avgBeatLen :: [TimedData [BBChord]] -> Double
+  avgBeatLen l = (sum . map avg $ l) / genericLength l where
+    avg (TimedData dat on off) = (off - on) / genericLength dat   
+    
 --------------------------------------------------------------------------------
 -- Chord sequence data parsers
 --------------------------------------------------------------------------------
+
+-- Parses the /musical part/ of the Billboard data file by recursively parsing
+-- the lines of chords, silence, metre changes or modulations
+pChordLines :: TimeSig -> Parser [(Double, [BBChord])]
+pChordLines ts = do p <- pLine ts  -- parse one line
+                    r <- case p of
+                          -- if we parse chords, continue
+                          (Left  t            ) -> concatLines t
+                          -- if we encounter a new global metre we use this 
+                          -- metre for the parsing the following chords
+                          (Right (Metre newTs)) -> pChordLines newTs 
+                          -- we ignore modulations for now
+                          (Right _            ) -> pChordLines ts
+                    return r where
   
+  -- concatenates the parsed lines of chords recursively
+  concatLines :: (Double, [BBChord]) -> Parser [(Double, [BBChord])]
+  concatLines t = case isEnd . head . snd $ t of
+                    True  -> (t :) <$> pure []        -- stop condition
+                    False -> (t :) <$> pChordLines ts -- continue
+
+-- Parses one line which can be chords, meta information, or end/silence
+pLine :: TimeSig -> Parser (Either (Double, [BBChord]) Meta)         
+pLine ts = (pChordLine ts <|> pSilenceLine <|> pMetaChange) <* pLineEnd
+
+
 -- parses a line annotated with "silence"
 pSilenceLine :: Parser (Either (Double, [BBChord]) Meta) 
 pSilenceLine = f <$> pDoubleRaw <* pSym '\t' <*> (pZSilence  <|> pSongEnd)
