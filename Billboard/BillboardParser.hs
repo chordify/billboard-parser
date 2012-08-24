@@ -497,19 +497,22 @@ updateRep _  [ ]      = error "updateRep: no chords to update"
 updateRep ts [c]      = replChord (beatsPerBar ts) c          -- one chord
 updateRep ts [c1, c2] = let t = (beatsPerBar ts) `div` 2      -- two chords
                         in  replChord t c1 ++ replChord t c2    
-updateRep _  cs       = update cs                             -- multiple chords
+updateRep ts  cs       = update cs                             -- multiple chords
   -- updates the repetited chords ('.')
   where update :: [BBChord] -> [BBChord]
         update [ ]    = [ ]
-        update [x]    = [x]
+        update [x]    = replChord (chordsPerDot ts) x
         update (x:y:xs) = case weight y of
           -- Because at parsing time we do not know which chord is repeated 
           -- by a '.' we replace the chord in the 'BBChord' by the previous 
           -- chord (at parsing time a None chord is stored in the BBchord)
-          Beat   -> x : update (y {chord = chord x}: xs)
-          Change -> x : update (y : xs)
+          Beat   -> replChord (chordsPerDot ts) x ++ update (y {chord = chord x}: xs)
+          Change -> replChord (chordsPerDot ts) x ++ update (y : xs)
           _      -> error "update: unexpected beat weigth" -- cannot happen
 
+chordsPerDot :: TimeSig -> Int
+chordsPerDot ts@(TimeSig (_,n)) = round ((fromIntegral . beatsPerBar $ ts) / (fromIntegral n) :: Float)
+          
 -- replicates an 'BBChord' the first chord will have a 'Change'
 -- weigth and the remaining chords will have a 'Beat' weight
 replChord :: Int -> BBChord -> [BBChord]

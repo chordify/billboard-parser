@@ -68,14 +68,14 @@ beatWeight ts pos = let beat = beatsPerBar ts in
 -- >>> beatsPerBar (TimeSig (12,8))
 -- 4
 beatsPerBar :: TimeSig -> Int
-beatsPerBar    (TimeSig (beats , 4)) = beats
+beatsPerBar    (TimeSig (beats , 4)) = beats * 2
 beatsPerBar    (TimeSig ( 6    , 8)) = 2
 beatsPerBar    (TimeSig ( 9    , 8)) = 3
 beatsPerBar    (TimeSig (12    , 8)) = 4
 beatsPerBar    (TimeSig ( 3    , 8)) = 8
 beatsPerBar    (TimeSig ( 8    , 8)) = 8
 beatsPerBar ts@(TimeSig (eights, 8)) 
-  | even eights = eights `div` 2
+  | even eights = eights 
   | otherwise   = irregularMeterError ts "cannot round the number of beats"
 beatsPerBar ts  = irregularMeterError ts "cannot round the number of beats"
 
