@@ -36,7 +36,7 @@ import Billboard.Annotation (  Annotation (..), Label (..)
                             , Instrument (..), Description (..), isStart
                             , isRepeat, getRepeats)
 
-import Debug.Trace
+-- import Debug.Trace
 --------------------------------------------------------------------------------
 -- Constants
 --------------------------------------------------------------------------------
@@ -315,14 +315,16 @@ fixOddLongBeats song = sil ++ fixOddLongLine cs  where
   (sil,cs) = break (and . map (not . isNoneBBChord) . getData) song
   -- precalculate the average beat length, filtering lines that contain
   -- none harmonic data (in the from of N chords)
-  avgBt    = avgBeatLens . filter (and . map isNoneBBChord . getData ) $ cs        
+  avgBt    = avgBeatLens . filter (and . map (not . isNoneBBChord) . getData ) $ cs        
   -- totLen   = offset . last $ cs   -- and the total length of the song
     
   fixOddLongLine :: [TimedData [BBChord]] -> [TimedData [BBChord]]
   fixOddLongLine (l : n : ls ) = 
     case avgBeatLen l >= (1 + acceptableBeatDeviationMultiplier * avgBt) of
-      True  -> trace ("update:" ++ show l) x where x = fmap (++ replicateNone (avgBeatLen n) l) l : n : ls
-      False -> traceShow l (                             l : n : ls)
+      -- True  -> trace ("update:" ++ show l) x where x = fmap (++ replicateNone (avgBeatLen n) l) l : n : ls
+      -- False -> traceShow l (                             l : n : ls)
+      True  -> fmap (replicateNone (avgBeatLen n) l ++) l : n : ls
+      False ->                                          l : n : ls
   fixOddLongLine l             = l
  
   

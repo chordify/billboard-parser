@@ -53,7 +53,7 @@ mainTestDir fp = getBBFiles fp >>= mapM readParse >>=
 -- | Tests the all beat lengths in a song and reports per song. 
 oddBeatLengthTest :: (BillboardData, Int) -> Test
 oddBeatLengthTest (bbd, bbid) = 
-  let song = filter (isNoneBBChord . getData ) . getSong $ bbd
+  let song = filter (not . isNoneBBChord . getData ) . getSong $ bbd
       (_, minLen, maxLen) = getMinMaxBeatLen song
   in TestCase (assertBool ("odd Beat length detected for:\n" 
                           ++ show bbid ++ ": " ++ getTitle bbd)
@@ -84,7 +84,8 @@ rangeCheck minLen maxLen t = let len = beatDuration t
 -- the minimum beat length and the maximum beat length, respectively.
 getMinMaxBeatLen :: [TimedData BBChord] -> (Double, Double, Double)
 getMinMaxBeatLen song =
-  let avgLen = (sum $ map beatDuration song) / (genericLength song)
+  let chds   = filter (not . isNoneBBChord . getData ) song
+      avgLen = (sum $ map beatDuration chds) / (genericLength chds)
   in ( avgLen                                            -- average beat length
      , avgLen *  acceptableBeatDeviationMultiplier       -- minimum beat length
      , avgLen * (acceptableBeatDeviationMultiplier + 1)) -- maximum beat length
