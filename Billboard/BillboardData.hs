@@ -164,11 +164,11 @@ showInMIREXFormat = concatMap showMIREX . getSong where
   mirexBBChord bbc = let c = chord bbc 
                      in case (chordRoot c, chordShorthand c) of
                           ((Note _ N), None ) -> "N"
-                          -- for X:1 containing only the root note... 
-                          (r         , None ) -> show r ++ ":maj"
                           (r         , sh   ) -> show r ++ showShortHand sh
   
   -- transforms a short hand into maj/min
   showShortHand :: Shorthand -> String
-  showShortHand sh = case (toMode sh) of MajMode -> ":maj"
-                                         MinMode -> ":min"
+  showShortHand sh = case (toMajMin sh) of MajClass -> ":maj"
+                                           MinClass -> ":min"
+                                           NoClass  -> ":X"
+                                           _        -> "Unsupported MIREX class"
