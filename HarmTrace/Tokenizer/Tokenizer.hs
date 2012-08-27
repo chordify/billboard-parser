@@ -69,7 +69,7 @@ pChordLabel = f <$> pRoot <* pSym ':'  <*> pMaybe pShorthand
            <*> ((pDegrees `opt` []) <* pInversion)
   where f r (Just s)    [] = Chord r s [] 0 1
         -- if there are no degrees and no shorthand (should not occur)
-        -- we make it a minor chord
+        -- we make it a major chord
         f r Nothing     [] = Chord r Maj [] 0 1
         -- in case of there is no short hand we analyse the degree list
         f r Nothing     d  = Chord r (analyseDegs d) d 0 1
