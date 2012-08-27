@@ -192,9 +192,9 @@ toMode Min6    = MinMode
 toMode Nin     = MajMode
 toMode Maj9    = MajMode
 toMode Min9    = MinMode
-toMode Five    = MajMode -- for now
-toMode Sus2    = MajMode -- for now
-toMode Sus4    = MajMode -- for now
+-- toMode Five    = MajMode -- for now
+-- toMode Sus2    = MajMode -- for now
+-- toMode Sus4    = MajMode -- for now
 -- additional Billboard shorthands
 toMode Min11    = MinMode
 toMode Min13    = MinMode
@@ -204,6 +204,14 @@ toMode Thirteen = MajMode
 toMode m        = 
   error ("HarmTrace.Base.MusicRep.toMode: unknown shorthand: " ++ show m)
 
+toMajMin :: Shorthand -> ClassType
+toMajMin Five   = NoClass
+toMajMin Sus2   = NoClass
+toMajMin Sus4   = NoClass
+toMajMin None   = NoClass
+toMajMin sh     = case toMode sh of
+                    MajMode -> MajClass
+                    MinMode -> MinClass
 
 --------------------------------------------------------------------------------
 -- Value Level Scale Degree Transposition
