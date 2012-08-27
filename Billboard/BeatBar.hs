@@ -15,7 +15,8 @@
 module Billboard.BeatBar ( TimeSig (..)
                          , BeatWeight (..)
                          , beatWeight
-                         , tatumsPerBar ) where
+                         , tatumsPerBar
+                         , chordsPerDot ) where
 
 --------------------------------------------------------------------------------
 -- Modelling Beat and Bar structures (for chord sequences)
