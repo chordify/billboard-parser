@@ -72,7 +72,7 @@ data DiatonicDegree = I | II | III | IV | V | VI | VII | Imp
 -- Representing absolute root notes  
 type Root = Note DiatonicNatural
   
-data DiatonicNatural =  C | D | E | F | G | A | B | N -- N is for no root 
+data DiatonicNatural =  C | D | E | F | G | A | B | N | X -- N is for no root, X is for MIREX
   deriving (Show, Eq, Enum, Ord, Bounded)
   
 -- Intervals for additonal chord notes    
@@ -151,10 +151,21 @@ noneLabel :: ChordLabel
 noneLabel = (Chord (Note Nothing N) None [] 0 0)
 
 isNoneChord :: ChordLabel -> Bool
--- isNoneChord (Chord (Note _ N) _ _ _ _) = True
--- since billboard this is not the case anymore.... there can be D:1 
-isNoneChord (Chord (Note _ N) None _ _ _) = True
-isNoneChord _                             = False
+isNoneChord (Chord (Note _ N) _ _ _ _) = True
+isNoneChord _                          = False
+
+isUnknown :: Root -> Bool
+isUnknown (Note _ X) = True
+isUnknown _          = False
+
+unknownLabel :: ChordLabel
+unknownLabel = (Chord (Note Nothing X) None [] 0 0)
+
+isUnknownChord :: ChordLabel -> Bool
+isUnknownChord (Chord (Note _ X) _ _ _ _) = True
+isUnknownChord (Chord (Note _ N) _ _ _ _) = False -- known to be NoneChord
+isUnknownChord (Chord _ None _ _ _)       = True
+isUnknownChord _                          = False
 
 toClassType :: Shorthand -> ClassType
 toClassType sh 

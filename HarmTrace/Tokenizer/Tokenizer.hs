@@ -56,9 +56,9 @@ pChordDur = setDur <$> pChord <*> (pSym ';' *> pNaturalRaw) where
   setDur c d = c {duration = d}
 
 pChord :: Parser ChordLabel 
-pChord = pChordLabel <|> (noneLabel <$ (pString "N" 
-                                    <|> pString "*"
-                                    <|> pString "&pause"))
+pChord =     pChordLabel 
+         <|> (noneLabel <$ (pString "N" <|> pString "&pause"))
+         <|> (unknownLabel <$ (pString "*" <|> pString "X"))
 
 -- For now, I assume there is always a shorthand, and sometimes extra
 -- degrees. I guess it might be the case that sometimes there is no shorthand,
