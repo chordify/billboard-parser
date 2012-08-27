@@ -168,5 +168,5 @@ showInMIREXFormat = concatMap showMIREX . getSong where
                           (r         , sh   ) -> case (toMajMin sh) of 
                                                   MajClass -> (show r) ++ ":maj"
                                                   MinClass -> (show r) ++ ":min"
-                                                  NoClass  -> "X"
+                                                  _  -> "X"
 

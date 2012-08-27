@@ -73,6 +73,7 @@ pChordLabel = f <$> pRoot <* pSym ':'  <*> pMaybe pShorthand
         f r Nothing     [] = Chord r Maj [] 0 1
         -- in case of there is no short hand we analyse the degree list
         f r Nothing     d  = Chord r (analyseDegs d) d 0 1
+        f r (Just None) d  = Chord r (analyseDegs d) d 0 1
         -- in case of a sus4/maj we also analyse the degree list
         f r (Just Sus4) d  = Chord r (analyseDegs d) d 0 1
         f r (Just Maj)  d  = Chord r (analyseDegs d) d 0 1
