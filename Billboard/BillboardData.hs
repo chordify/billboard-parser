@@ -174,7 +174,7 @@ showInMIREXFormat = concatMap showMIREX . getSong where
                                                   Min7 -> (show r) ++ ":min"
                                                   Sev -> (show r) ++ ":maj"
                                                   Dim7 -> (show r) ++ ":dim"
-                                                  HDim7 -> (show r) ++ ":min"
+                                                  HDim7 -> (show r) ++ ":dim"
                                                   MinMaj7 -> (show r) ++ ":min"
                                                   Maj6 -> (show r) ++ ":maj"
                                                   Min6 -> (show r) ++ ":min"
