@@ -30,7 +30,8 @@ import HarmTrace.Base.MusicRep hiding (isNone)
 import HarmTrace.Audio.ChordTypes (TimedData (..), Timed (..))
 import HarmTrace.Tokenizer.Tokenizer (pRoot, pChord)
 
-import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..), beatsPerBar)
+import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..), tatumsPerBar
+                          , chordsPerDot )
 import Billboard.BillboardData 
 import Billboard.Annotation (  Annotation (..), Label (..)
                             , Instrument (..), Description (..), isStart
@@ -494,21 +495,21 @@ markBarStart (h:t) = h {weight = Bar} : t
 -- repetitons marked with a '.'
 updateRep :: TimeSig -> [BBChord] -> [BBChord]
 updateRep _  [ ]      = error "updateRep: no chords to update"
-updateRep ts [c]      = replChord (beatsPerBar ts) c          -- one chord
-updateRep ts [c1, c2] = let t = (beatsPerBar ts) `div` 2      -- two chords
+updateRep ts [c]      = replChord (tatumsPerBar ts) c          -- one chord
+updateRep ts [c1, c2] = let t = (tatumsPerBar ts) `div` 2      -- two chords
                         in  replChord t c1 ++ replChord t c2    
-updateRep _  cs       = update cs                             -- multiple chords
+updateRep ts cs       = update cs                             -- multiple chords
   -- updates the repetited chords ('.')
   where update :: [BBChord] -> [BBChord]
         update [ ]    = [ ]
-        update [x]    = [x]
+        update [x]    = replChord (chordsPerDot ts) x
         update (x:y:xs) = case weight y of
           -- Because at parsing time we do not know which chord is repeated 
           -- by a '.' we replace the chord in the 'BBChord' by the previous 
           -- chord (at parsing time a None chord is stored in the BBchord)
-          Beat   -> x : update (y {chord = chord x}: xs)
-          Change -> x : update (y : xs)
-          _      -> error "update: unexpected beat weigth" -- cannot happen
+          Beat   -> replChord (chordsPerDot ts) x ++ update (y {chord = chord x}: xs)
+          Change -> replChord (chordsPerDot ts) x ++ update (y : xs)
+          _      -> error "update: unexpected beat weight" -- cannot happen
 
 -- replicates an 'BBChord' the first chord will have a 'Change'
 -- weigth and the remaining chords will have a 'Beat' weight

@@ -15,7 +15,7 @@
 module Billboard.BeatBar ( TimeSig (..)
                          , BeatWeight (..)
                          , beatWeight
-                         , beatsPerBar ) where
+                         , tatumsPerBar ) where
 
 --------------------------------------------------------------------------------
 -- Modelling Beat and Bar structures (for chord sequences)
@@ -48,36 +48,39 @@ instance Show TimeSig where
 -- a bar has strength 1, a bar after 4 bars 2, a bar after 8 bars 3, and a bar 
 -- after 16 bars 4.
 beatWeight :: TimeSig -> Int -> BeatWeight
-beatWeight ts pos = let beat = beatsPerBar ts in
-  case (mod pos beat, mod pos (4*beat), mod pos (8*beat), mod pos (16*beat)) of
+beatWeight ts pos = let tatum = tatumsPerBar ts in
+  case (mod pos tatum, mod pos (4*tatum), mod pos (8*tatum), mod pos (16*tatum)) of
     (0,0,0,0) -> Bar16 -- a bar @ sixteen measures, weight 4
     (0,0,0,_) -> Bar8  -- a bar @ eight measures
     (0,0,_,_) -> Bar4  -- a bar @ four measures
     (0,_,_,_) -> Bar   -- a bar position
     _         -> Beat  -- a regular beat position, weight 0 
     
--- | Returns the number of beats in a bar which is different for time
+
+
+-- | Returns the number of 'tatums' in a bar which is different for time
 -- signatures. For example:
 -- 
--- >>> beatsPerBar (TimeSig (3 ,4))
--- 3
+-- >>> tatumsPerBar (TimeSig (3 ,4))
+-- 6
 --
--- >>> beatsPerBar (TimeSig (6 ,8))
--- 2
+-- >>> tatumsPerBar (TimeSig (6 ,8))
+-- 6
 --
--- >>> beatsPerBar (TimeSig (12,8))
--- 4
-beatsPerBar :: TimeSig -> Int
-beatsPerBar    (TimeSig (beats , 4)) = beats
-beatsPerBar    (TimeSig ( 6    , 8)) = 2
-beatsPerBar    (TimeSig ( 9    , 8)) = 3
-beatsPerBar    (TimeSig (12    , 8)) = 4
-beatsPerBar    (TimeSig ( 3    , 8)) = 8
-beatsPerBar    (TimeSig ( 8    , 8)) = 8
-beatsPerBar ts@(TimeSig (eights, 8)) 
-  | even eights = eights `div` 2
-  | otherwise   = irregularMeterError ts "cannot round the number of beats"
-beatsPerBar ts  = irregularMeterError ts "cannot round the number of beats"
+-- >>> tatumsPerBar (TimeSig (12,8))
+-- 12
+--
+-- N.B. This function is not strictly correct music-theoretically, but
+-- it reflects how Billboard annotators used time signatures.
+tatumsPerBar :: TimeSig -> Int
+tatumsPerBar (TimeSig (beats , 4)) = 2 * beats
+tatumsPerBar (TimeSig (beats , 8)) = beats
+tatumsPerBar ts = irregularMeterError ts "illegal denominator"
+
+chordsPerDot :: TimeSig -> Int
+chordsPerDot (TimeSig (_ , 4)) = 2
+chordsPerDot (TimeSig (_ , 8)) = 1
+chordsPerDot ts = irregularMeterError ts "illegal denominator"
 
 irregularMeterError :: TimeSig -> String -> a
 irregularMeterError ts msg = error ("Irregular meter: " ++ show ts ++ ' ' : msg)
