@@ -80,7 +80,7 @@ tatumsPerBar ts = irregularMeterError ts "illegal denominator"
 
 chordsPerDot :: TimeSig -> Int
 chordsPerDot (TimeSig (_ , 4)) = 2
-chordsPerDot (TimeSig (_ , 8)) = 1
+chordsPerDot (TimeSig (_ , 8)) = 3
 chordsPerDot ts = irregularMeterError ts "illegal denominator"
 
 irregularMeterError :: TimeSig -> String -> a
