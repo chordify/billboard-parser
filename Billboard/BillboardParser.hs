@@ -37,8 +37,6 @@ import Billboard.Annotation (  Annotation (..), Label (..)
                             , Instrument (..), Description (..), isStart
                             , isRepeat, getRepeats)
 
--- import Debug.Trace
-
 --------------------------------------------------------------------------------
 -- Constants
 --------------------------------------------------------------------------------
@@ -335,17 +333,6 @@ fixOddLongBeats dir beatDev song = sil ++ fixOddLongLine cs  where
   fixOddLongLine :: [TimedData [BBChord]] -> [TimedData [BBChord]]
   fixOddLongLine (l : n : ls ) = 
     case (avgBeatLen l >= ((1 + beatDev) * avgBt), dir) of
-      -- (True, Forward)  -> trace ("forward:(" ++ show (avgBeatLen l) ++ ">=" 
-                                   -- ++ show ((1 + beatDev) * avgBt) ++ "): " 
-                                   -- ++ show l)
-                                -- (fmap (++ replicateNone (avgBeatLen n) l) l : n : ls)
-      -- (True, Backward) -> trace ("backward:(" ++ show (avgBeatLen l) ++ ">=" 
-                                   -- ++ show ((1 + beatDev) * avgBt) ++ "): " 
-                                   -- ++ show l)
-                                -- (fmap (++ replicateNone (avgBeatLen n) l) l : n : ls)
-      -- (False, _      ) -> trace ("nochange (" ++ show (avgBeatLen l) ++ ">=" 
-                                   -- ++ show ((1 + beatDev) * avgBt) ++ "): " 
-                                   -- ++ show l)  (  l : n : ls)
       (True, Forward ) -> fmap (replicateNone (avgBeatLen n) l ++) l : n : ls
       (True, Backward) -> fmap (++ replicateNone (avgBeatLen n) l) l : n : ls
       (False, _      ) ->                                          l : n : ls
