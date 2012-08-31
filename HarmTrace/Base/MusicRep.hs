@@ -77,6 +77,8 @@ data DiatonicNatural =  C | D | E | F | G | A | B | N | X -- N is for no root, X
   
 -- Intervals for additonal chord notes    
 type Addition = Note Interval
+-- data Addition = Add   Note Interval
+              -- | NoAdd Note Interval
   
 data Interval = I1  | I2  | I3  | I4 | I5 | I6 | I7 | I8 | I9 | I10 
               | I11 | I12 | I13 
@@ -87,6 +89,8 @@ data Note a = Note (Maybe Modifier) a   deriving (Eq, Ord)
 data Modifier = Sh | Fl | SS | FF -- Sharp, flat, double sharp, double flat
   deriving (Eq, Ord)
 
+data Triad = MajTriad | MinTriad | AugTriad | DimTriad | NoTriad deriving Eq
+  
 --------------------------------------------------------------------------------
 -- Instances for the general music datatypes
 --------------------------------------------------------------------------------   
@@ -138,6 +142,13 @@ showAdditions :: [Addition] -> String
 showAdditions a 
   | null a    = ""
   | otherwise = "(" ++ concat (intersperse ","  (map show a)) ++ ")"           
+
+instance Show Triad where
+  show MajTriad = "maj"
+  show MinTriad = "min"
+  show AugTriad = "aug"
+  show DimTriad = "dim"
+  show NoTriad  = "NoTriad"
   
 --------------------------------------------------------------------------------
 -- Utils      
@@ -176,41 +187,80 @@ toClassType sh
   | otherwise = error 
       ("HarmTrace.Base.MusicRep.toClassType: unknown shorthand: " ++ show sh)
 
+-- -- analyses a list of Degrees and assigns a shortHand i.e. Chord Class        
+-- analyseDegsTriad :: [Addition] -> Shorthand        
+-- analyseDegsTriad d 
+  -- -- minor third
+  -- | (Note (Just Fl) I3) `elem` d = 
+  -- -- major third
+  -- | (Note  Nothing  I3) `elem` d = Maj
+  
+  
+  
+  
+  -- | (Note (Just Fl) I7)  `elem` d = Sev
+  -- | (Note  Nothing  I7)  `elem` d = Maj7
+  -- | (Note (Just Fl) I9)  `elem` d = Sev
+  -- | (Note (Just Sh) I9)  `elem` d = Sev
+  -- | (Note  Nothing  I11) `elem` d = Sev
+  -- | (Note (Just Sh) I11) `elem` d = Sev
+  -- | (Note (Just Fl) I13) `elem` d = Sev
+  -- | (Note  Nothing  I13) `elem` d = Sev
+  -- | otherwise                     = Maj
+   
+-- hasMajThird
+   
+      
+-- | Converts a 'Shorthand' to a 'Triad' 
+-- N.B. this function should not be exported because the shorthand alone cannot
+-- determine the triad 
+toTriad :: Shorthand -> Triad     
+toTriad Maj     = MajTriad
+toTriad Min     = MinTriad
+toTriad Dim     = DimTriad
+toTriad Aug     = AugTriad
+toTriad Maj7    = MajTriad
+toTriad Min7    = MinTriad
+toTriad Sev     = MajTriad
+toTriad Dim7    = MinTriad
+toTriad HDim7   = MinTriad
+toTriad MinMaj7 = MinTriad
+toTriad Maj6    = MajTriad 
+toTriad Min6    = MinTriad
+toTriad Nin     = MajTriad
+toTriad Maj9    = MajTriad
+toTriad Min9    = MinTriad
+toTriad Five    = NoTriad
+toTriad Sus2    = NoTriad
+toTriad Sus4    = NoTriad
+toTriad None    = NoTriad
+-- additional Billboard shorthands
+toTriad Min11    = MinTriad
+toTriad Min13    = MinTriad
+toTriad Maj13    = MajTriad
+toTriad Eleven   = MajTriad
+toTriad Thirteen = MajTriad
+-- toTriad m        = 
+  -- error ("HarmTrace.Base.MusicRep.toMode: unkown shorthand: " ++ show m)      
+      
 -- | Converts a 'Shorthand' to a 'Mode'
 toMode :: Shorthand -> Mode     
-toMode Maj     = MajMode
-toMode Min     = MinMode
-toMode Dim     = MinMode
-toMode Aug     = MajMode
-toMode Maj7    = MajMode
-toMode Min7    = MinMode
-toMode Sev     = MajMode
-toMode Dim7    = MinMode
-toMode HDim7   = MinMode
-toMode MinMaj7 = MinMode
-toMode Maj6    = MajMode 
-toMode Min6    = MinMode
-toMode Nin     = MajMode
-toMode Maj9    = MajMode
-toMode Min9    = MinMode
--- additional Billboard shorthands
-toMode Min11    = MinMode
-toMode Min13    = MinMode
-toMode Maj13    = MajMode
-toMode Eleven   = MajMode
-toMode Thirteen = MajMode
-toMode m        = 
-  error ("HarmTrace.Base.MusicRep.toMode: cannot convert shorthand: " ++ show m)
+toMode sh = case toTriad sh of
+  MajTriad -> MajMode
+  MinTriad -> MinMode
+  m        -> error (  "HarmTrace.Base.MusicRep.toMode: cannot convert "
+                    ++ " shorthand to mode: " ++ show m)
 
--- | Converts a 'Shorthand' to 
+-- | Converts a 'Shorthand' to either a 'MajClass', 'MinClass' or 'NoClass' 
+-- 'ClassType'.
 toMajMin :: Shorthand -> ClassType
-toMajMin Five   = NoClass
-toMajMin Sus2   = NoClass
-toMajMin Sus4   = NoClass
-toMajMin None   = NoClass
-toMajMin sh     = case toMode sh of
-                    MajMode -> MajClass
-                    MinMode -> MinClass
+toMajMin sh = case toTriad sh of
+  MajTriad -> MajClass
+  MinTriad -> MinClass
+  AugTriad -> MajClass
+  DimTriad -> MinClass
+  NoTriad  -> NoClass
+
 
 --------------------------------------------------------------------------------
 -- Value Level Scale Degree Transposition

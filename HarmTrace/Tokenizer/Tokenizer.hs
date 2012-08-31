@@ -72,11 +72,11 @@ pChordLabel = f <$> pRoot <* pSym ':'  <*> pMaybe pShorthand
         -- we make it a major chord
         f r Nothing     [] = Chord r Maj [] 0 1
         -- in case of there is no short hand we analyse the degree list
-        f r Nothing     d  = Chord r (analyseDegs d) d 0 1
-        f r (Just None) d  = Chord r (analyseDegs d) d 0 1
+        f r Nothing     d  = Chord r (analyseDegsOld d) d 0 1
+        f r (Just None) d  = Chord r (analyseDegsOld d) d 0 1
         -- in case of a sus4/maj we also analyse the degree list
-        f r (Just Sus4) d  = Chord r (analyseDegs d) d 0 1
-        f r (Just Maj)  d  = Chord r (analyseDegs d) d 0 1
+        f r (Just Sus4) d  = Chord r (analyseDegsOld d) d 0 1
+        f r (Just Maj)  d  = Chord r (analyseDegsOld d) d 0 1
         -- if we have another short hand we ignore the degrees list
         f r (Just s)    d  = Chord r s d 0 1
 
@@ -92,9 +92,10 @@ pKey = f <$> pRoot <* pSym ':' <*> pShorthand
                           ++ "found: " ++ show m)
                           
 
--- analyses a list of Degrees and assigns a shortHand i.e. Chord Class        
-analyseDegs :: [Addition] -> Shorthand        
-analyseDegs d 
+-- analyses a list of Degrees and assigns a shortHand i.e. Chord Class  
+-- TODO replace by more correct version in HarmTrace.Base.MusicRep      
+analyseDegsOld :: [Addition] -> Shorthand        
+analyseDegsOld d 
   | (Note (Just Fl) I3)  `elem` d = Min
   | (Note (Just Sh) I5)  `elem` d = Sev
   | (Note (Just Fl) I7)  `elem` d = Sev
@@ -145,7 +146,8 @@ pShorthand =     Maj      <$ pString "maj"
 pDegrees :: Parser [Addition]
 pDegrees = pPacked (pSym '(') (pSym ')') 
                        (catMaybes <$> (pList1Sep (pSym ',') pDegree))
-                 
+
+-- TODO removing degrees is not implemented 
 pDegree :: Parser (Maybe Addition)
 pDegree =   (Just   <$> (Note <$> pMaybe pModifier <*> pInterval))
             <|> Nothing <$  pSym '*' <* pMaybe pModifier <*  pInterval
