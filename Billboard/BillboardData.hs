@@ -75,13 +75,13 @@ instance Show BBChord where
   
 instance Ord BBChord where
   compare (BBChord _ _ a) (BBChord _ _ b)
-    | rt == EQ = compare (toMode $ chordShorthand a) (toMode $ chordShorthand b)
+    | rt == EQ = compare (toTriad a) (toTriad b) -- N.B.toTriad can be expensive
     | otherwise  = rt where
         rt = compare (chordRoot a) (chordRoot b)
 
 instance Eq BBChord where
-  a == b = rootMode a == rootMode b where 
-    rootMode (BBChord _ _ (Chord r sh _deg _loc _d)) = (r, toMode sh)
+  (BBChord _ _ a) == (BBChord _ _ b) = chordRoot a == chordRoot b && 
+                                       toTriad   a == toTriad   b
 
 
 --------------------------------------------------------------------------------
@@ -165,28 +165,4 @@ showInMIREXFormat = concatMap showMIREX . getSong where
                      in case (chordRoot c, chordShorthand c) of
                           ((Note _ N), None ) -> "N"
                           ((Note _ X), _    ) -> "X"
-                          (r         , sh   ) -> case sh of
-                                                  Maj -> (show r) ++ ":maj"
-                                                  Min -> (show r) ++ ":min"
-                                                  Dim -> (show r) ++ ":dim"
-                                                  Aug -> (show r) ++ ":aug"
-                                                  Maj7 -> (show r) ++ ":maj"
-                                                  Min7 -> (show r) ++ ":min"
-                                                  Sev -> (show r) ++ ":maj"
-                                                  Dim7 -> (show r) ++ ":dim"
-                                                  HDim7 -> (show r) ++ ":dim"
-                                                  MinMaj7 -> (show r) ++ ":min"
-                                                  Maj6 -> (show r) ++ ":maj"
-                                                  Min6 -> (show r) ++ ":min"
-                                                  Nin -> (show r) ++ ":maj"
-                                                  Maj9 -> (show r) ++ ":maj"
-                                                  Min9 -> (show r) ++ ":min"
-                                                  Sus4 -> (show r) ++ ":sus4"
-                                                  Sus2 -> (show r) ++ ":sus2"
-                                                  Five -> "X"
-                                                  None -> "X"
-                                                  Eleven -> ":maj"
-                                                  Thirteen -> ":maj"
-                                                  Min11 -> ":min"
-                                                  Maj13 -> ":maj"
-                                                  Min13 -> ":min"
+                          (r         , _    ) -> show r ++':' : show (toTriad c)

@@ -6,7 +6,7 @@
 module HarmTrace.Base.MusicRep where
   
 import Data.Maybe
-import Data.List (elemIndex, intersperse, intercalate)  
+import Data.List (elemIndex, intersperse, intercalate, (\\), partition)  
 
 -- harmtrace specific dependencies
 -- import Control.DeepSeq
@@ -42,22 +42,22 @@ data Class = Class ClassType Shorthand
 data ClassType = MajClass | MinClass | DomClass | DimClass | NoClass
   deriving (Eq)
 
-data Shorthand = -- Triad chords
+data Shorthand = -- | Triadic chords
                  Maj | Min | Dim | Aug
-                 -- Seventh chords
+                 -- | Seventh chords
                | Maj7 | Min7 | Sev | Dim7 | HDim7 | MinMaj7
-                 -- Sixth chords
+                 -- | Sixth chords
                | Maj6 | Min6
-                 -- Extended chords
+                 -- | Extended chords
                | Nin | Maj9 | Min9
-                 -- Suspended chords
+                 -- | Suspended chords
                | Sus4 | Sus2
-                 -- Power chords
+                 -- | Power chords
                | Five
                  -- In some cases there is no chord a certain position
                  -- This is especially important for the chroma processing
                | None
-                 -- ambiguous shorthands in billboard collection
+                 -- Additional shorthands in billboard collection
                | Eleven | Thirteen | Min11 | Maj13 | Min13
                
   deriving (Show, Eq, Enum, Bounded) 
@@ -75,10 +75,11 @@ type Root = Note DiatonicNatural
 data DiatonicNatural =  C | D | E | F | G | A | B | N | X -- N is for no root, X is for MIREX
   deriving (Show, Eq, Enum, Ord, Bounded)
   
--- Intervals for additonal chord notes    
+-- | Intervals for additonal chord notes    
 data Addition = Add   (Note Interval)
-              | NoAdd (Note Interval) deriving Eq
-  
+              | NoAdd (Note Interval) deriving (Eq, Ord)
+
+-- | Diatonic major intervals used to denote 'Chord' 'Addition's
 data Interval = I1  | I2  | I3  | I4 | I5 | I6 | I7 | I8 | I9 | I10 
               | I11 | I12 | I13 
   deriving (Eq, Enum, Ord, Bounded)     
@@ -88,7 +89,8 @@ data Note a = Note (Maybe Modifier) a   deriving (Eq, Ord)
 data Modifier = Sh | Fl | SS | FF -- Sharp, flat, double sharp, double flat
   deriving (Eq, Ord)
 
-data Triad = MajTriad | MinTriad | AugTriad | DimTriad | NoTriad deriving Eq
+data Triad = MajTriad | MinTriad | AugTriad | DimTriad | NoTriad 
+               deriving (Ord, Eq)
   
 --------------------------------------------------------------------------------
 -- Instances for the general music datatypes
@@ -154,7 +156,7 @@ instance Show Triad where
   show NoTriad  = "NoTriad"
   
 --------------------------------------------------------------------------------
--- Utils      
+-- Tests     
 --------------------------------------------------------------------------------
 
 isNone :: Root -> Bool
@@ -181,8 +183,18 @@ isUnknownChord (Chord (Note _ N) _ _ _ _) = False -- known to be NoneChord
 isUnknownChord (Chord _ None _ _ _)       = True
 isUnknownChord _                          = False
 
+-- | Returns true if the 'Chord' 'Addition' represents an addition and not 
+-- a degree that has to be removed (*).
+isAddition :: Addition -> Bool
+isAddition (Add   _) = True
+isAddition (NoAdd _) = False
+
+--------------------------------------------------------------------------------
+-- Transformations and analysis of chords
+--------------------------------------------------------------------------------
+
 toClassType :: Shorthand -> ClassType
-toClassType sh 
+toClassType sh -- TODO: reconsider these categories...
   | sh `elem` [Maj,Maj7,Maj6,Maj9,MinMaj7,Five,Sus4,Sus2] = MajClass
   | sh `elem` [Min,Min7,Min6,Min9,HDim7] = MinClass
   | sh `elem` [Sev,Nin,Aug] = DomClass
@@ -190,79 +202,152 @@ toClassType sh
   | otherwise = error 
       ("HarmTrace.Base.MusicRep.toClassType: unknown shorthand: " ++ show sh)
 
--- analyses a list of Degrees and assigns a shortHand i.e. Chord Class        
--- analyseDegsTriad :: [Addition] -> Shorthand        
--- analyseDegsTriad d 
-  -- -- minor third
-  -- | (Note (Just Fl) I3) `elem` d = 
-  -- -- major third
-  -- | (Note  Nothing  I3) `elem` d = Maj
-  
-  
-  
-  
-  -- | (Note (Just Fl) I7)  `elem` d = Sev
-  -- | (Note  Nothing  I7)  `elem` d = Maj7
-  -- | (Note (Just Fl) I9)  `elem` d = Sev
-  -- | (Note (Just Sh) I9)  `elem` d = Sev
-  -- | (Note  Nothing  I11) `elem` d = Sev
-  -- | (Note (Just Sh) I11) `elem` d = Sev
-  -- | (Note (Just Fl) I13) `elem` d = Sev
-  -- | (Note  Nothing  I13) `elem` d = Sev
-  -- | otherwise                     = Maj
-   
--- hasMajThird
-   
+
+-- should not be exported, used only in toTriad
+data Third = MajThird | MinThird  | NoThird deriving Eq
+data Fifth = DimFifth | PerfFifth | AugFifth | NoFifth deriving Eq
+      
+-- | Takes a 'Chord' and determines the 'Triad'
+--
+-- >>> toTriad (Chord (Note Nothing C) Min [NoAdd (Note (Just Fl) I3),Add (Note Nothing I3)] 0 0)
+-- maj 
+--
+-- >>> toTriad (Chord (Note Nothing C) HDim7 [Add (Note (Just Sh) I11)] 0 0)
+-- dim
+--
+-- >>> toTriad (Chord (Note Nothing C) Min [NoAdd (Note (Just Fl) I3)] 0 0)
+-- NoTriad
+--
+toTriad :: Chord a -> Triad
+toTriad   (Chord  _r sh []  _loc _d) = shToTriad sh -- there are no degrees
+toTriad c@(Chord  _r sh add _loc _d) =  -- combine the degrees and analyse them
+  let degs = toDegreeList c -- here, also NoAdd degrees are resolved
+      
+      -- analyses the third in a degree list
+      analyseThird :: [Addition] -> Third
+      analyseThird d 
+        | (Add (Note (Just Fl) I3)) `elem` d = MinThird
+        | (Add (Note  Nothing  I3)) `elem` d = MajThird
+        | otherwise                          = NoThird
+      
+      -- analyses the fifth in a degree list 
+      analyseFifth :: [Addition] -> Fifth
+      analyseFifth d  
+        | (Add (Note (Just Fl) I5)) `elem` d = DimFifth
+        | (Add (Note (Just Sh) I5)) `elem` d = AugFifth
+        | (Add (Note  Nothing  I5)) `elem` d = PerfFifth
+        | otherwise                          = NoFifth
+     
+  in case (analyseThird degs, analyseFifth degs) of
+       (MajThird, PerfFifth) -> MajTriad
+       (MajThird, AugFifth ) -> AugTriad
+       (MajThird, DimFifth ) -> NoTriad
+       (MinThird, PerfFifth) -> MinTriad
+       (MinThird, AugFifth ) -> NoTriad
+       (MinThird, DimFifth ) -> DimTriad
+       (NoThird,  _        ) -> NoTriad
+       (_      ,  NoFifth  ) -> NoTriad
       
 -- | Converts a 'Shorthand' to a 'Triad' 
 -- N.B. this function should not be exported because the shorthand alone cannot
 -- determine the triad 
-toTriad :: Shorthand -> Triad     
-toTriad Maj     = MajTriad
-toTriad Min     = MinTriad
-toTriad Dim     = DimTriad
-toTriad Aug     = AugTriad
-toTriad Maj7    = MajTriad
-toTriad Min7    = MinTriad
-toTriad Sev     = MajTriad
-toTriad Dim7    = MinTriad
-toTriad HDim7   = MinTriad
-toTriad MinMaj7 = MinTriad
-toTriad Maj6    = MajTriad 
-toTriad Min6    = MinTriad
-toTriad Nin     = MajTriad
-toTriad Maj9    = MajTriad
-toTriad Min9    = MinTriad
-toTriad Five    = NoTriad
-toTriad Sus2    = NoTriad
-toTriad Sus4    = NoTriad
-toTriad None    = NoTriad
+shToTriad :: Shorthand -> Triad     
+shToTriad Maj     = MajTriad
+shToTriad Min     = MinTriad
+shToTriad Dim     = DimTriad
+shToTriad Aug     = AugTriad
+shToTriad Maj7    = MajTriad
+shToTriad Min7    = MinTriad
+shToTriad Sev     = MajTriad
+shToTriad Dim7    = MinTriad
+shToTriad HDim7   = MinTriad
+shToTriad MinMaj7 = MinTriad
+shToTriad Maj6    = MajTriad 
+shToTriad Min6    = MinTriad
+shToTriad Nin     = MajTriad
+shToTriad Maj9    = MajTriad
+shToTriad Min9    = MinTriad
+shToTriad Five    = NoTriad
+shToTriad Sus2    = NoTriad
+shToTriad Sus4    = NoTriad
+shToTriad None    = NoTriad
 -- additional Billboard shorthands
-toTriad Min11    = MinTriad
-toTriad Min13    = MinTriad
-toTriad Maj13    = MajTriad
-toTriad Eleven   = MajTriad
-toTriad Thirteen = MajTriad
--- toTriad m        = 
-  -- error ("HarmTrace.Base.MusicRep.toMode: unkown shorthand: " ++ show m)      
+shToTriad Min11    = MinTriad
+shToTriad Eleven   = MajTriad
+shToTriad Min13    = MinTriad
+shToTriad Maj13    = MajTriad
+shToTriad Thirteen = MajTriad
+
+-- | Transforms a Chord into a list of relative degrees (i.e. 'Addition's,
+-- without the root note).
+-- 
+-- >>> toDegreeList (Chord (Note Nothing C) HDim7 [Add (Note (Just Sh) I11)] 0 0)
+-- [3b,5b,7b,11#]
+--
+-- >>> toDegreeList (Chord (Note Nothing C) Min13 [NoAdd (Note Nothing I11)] 0 0)
+-- [3b,5,7b,9,13]
+--
+toDegreeList :: Chord a -> [Addition]
+toDegreeList (Chord  _r sh []  _loc _d) = map Add (shToDeg sh)
+toDegreeList (Chord  _r sh deg _loc _d) = adds  \\ (toAdds rem) where
+
+  (adds, rem) = partition isAddition ((map Add . shToDeg $ sh) ++ deg)
+  
+  toAdds :: [Addition] -> [Addition]
+  toAdds = map (\(NoAdd x) -> (Add x))
+  
+-- takes the set based difference of two sorted lists
+-- sortDiv [] _  = []
+-- sortDiv l  [] = l
+-- sortDiv (d:ds) rrs@(r:rs) 
+  -- | d <  r    = sortDiv ds rrs -- the degree does not have to be removed
+  -- | d == r    = sortDiv ds rs  -- remove the degree
+  -- | otherwise = sortDiv ds rrs -- the degree to be removed is not in the chord
+  
+-- | Expands a 'Shorthand' to its list of degrees
+shToDeg :: Shorthand -> [Note Interval]     
+shToDeg Maj     = [Note Nothing   I3, Note Nothing   I5]
+shToDeg Min     = [Note (Just Fl) I3, Note Nothing   I5]
+shToDeg Dim     = [Note (Just Fl) I3, Note (Just Fl) I5]
+shToDeg Aug     = [Note Nothing   I3, Note (Just Sh) I5]
+shToDeg Maj7    = shToDeg Maj     ++ [Note Nothing   I7]
+shToDeg Min7    = shToDeg Min     ++ [Note (Just Fl) I7]
+shToDeg Sev     = shToDeg Maj     ++ [Note (Just Fl) I7]
+shToDeg Dim7    = shToDeg Dim     ++ [Note (Just FF) I7]
+shToDeg HDim7   = shToDeg Dim     ++ [Note (Just Fl) I7]
+shToDeg MinMaj7 = shToDeg Min     ++ [Note Nothing   I7]
+shToDeg Maj6    = shToDeg Maj     ++ [Note Nothing   I6]
+shToDeg Min6    = shToDeg Min     ++ [Note (Just Fl) I6]
+shToDeg Nin     = shToDeg Sev     ++ [Note Nothing   I9]
+shToDeg Maj9    = shToDeg Maj7    ++ [Note Nothing   I9]
+shToDeg Min9    = shToDeg Min7    ++ [Note Nothing   I9]
+shToDeg Five    = [Note Nothing   I5]
+shToDeg Sus2    = [Note Nothing   I2, Note Nothing   I5]
+shToDeg Sus4    = [Note Nothing   I4, Note Nothing   I5]
+shToDeg None    = []
+-- additional Billboard shorthands
+shToDeg Min11    = shToDeg Min9   ++ [Note Nothing   I11]
+shToDeg Eleven   = shToDeg Nin    ++ [Note Nothing   I11]
+shToDeg Min13    = shToDeg Min11  ++ [Note Nothing   I13]
+shToDeg Maj13    = shToDeg Maj9   ++ [Note Nothing   I13]
+shToDeg Thirteen = shToDeg Eleven ++ [Note Nothing   I13]
+     
       
 -- | Converts a 'Shorthand' to a 'Mode'
-toMode :: Shorthand -> Mode     
-toMode sh = case toTriad sh of
-  MajTriad -> MajMode
-  MinTriad -> MinMode
-  m        -> error (  "HarmTrace.Base.MusicRep.toMode: cannot convert "
-                    ++ " shorthand to mode: " ++ show m)
+toMode :: Triad -> Mode     
+toMode MajTriad = MajMode
+toMode MinTriad = MinMode
+toMode t        = error (  "HarmTrace.Base.MusicRep.toMode: cannot convert "
+                        ++ " triad to mode: " ++ show t)
 
 -- | Converts a 'Shorthand' to either a 'MajClass', 'MinClass' or 'NoClass' 
 -- 'ClassType'.
-toMajMin :: Shorthand -> ClassType
-toMajMin sh = case toTriad sh of
-  MajTriad -> MajClass
-  MinTriad -> MinClass
-  AugTriad -> MajClass
-  DimTriad -> MinClass
-  NoTriad  -> NoClass
+toMajMin :: Triad -> ClassType
+toMajMin MajTriad = MajClass
+toMajMin MinTriad = MinClass
+toMajMin AugTriad = MajClass
+toMajMin DimTriad = MinClass
+toMajMin NoTriad  = NoClass
 
 
 --------------------------------------------------------------------------------
