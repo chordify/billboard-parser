@@ -76,9 +76,8 @@ data DiatonicNatural =  C | D | E | F | G | A | B | N | X -- N is for no root, X
   deriving (Show, Eq, Enum, Ord, Bounded)
   
 -- Intervals for additonal chord notes    
-type Addition = Note Interval
--- data Addition = Add   Note Interval
-              -- | NoAdd Note Interval
+data Addition = Add   (Note Interval)
+              | NoAdd (Note Interval) deriving Eq
   
 data Interval = I1  | I2  | I3  | I4 | I5 | I6 | I7 | I8 | I9 | I10 
               | I11 | I12 | I13 
@@ -137,6 +136,10 @@ instance Show Modifier where
   show SS = "##"
   show FF = "bb"     
 
+instance Show Addition where
+  show (Add   n) = show n
+  show (NoAdd n) = '*' : show n
+  
 -- for showing additional additions
 showAdditions :: [Addition] -> String
 showAdditions a 
@@ -187,7 +190,7 @@ toClassType sh
   | otherwise = error 
       ("HarmTrace.Base.MusicRep.toClassType: unknown shorthand: " ++ show sh)
 
--- -- analyses a list of Degrees and assigns a shortHand i.e. Chord Class        
+-- analyses a list of Degrees and assigns a shortHand i.e. Chord Class        
 -- analyseDegsTriad :: [Addition] -> Shorthand        
 -- analyseDegsTriad d 
   -- -- minor third

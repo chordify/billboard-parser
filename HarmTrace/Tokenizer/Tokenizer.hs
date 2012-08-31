@@ -12,8 +12,6 @@ import HarmTrace.Base.Parsing
 import HarmTrace.Base.MusicRep
 import HarmTrace.Tokenizer.Tokens
 
-import Data.Maybe
-
 --------------------------------------------------------------------------------
 -- Tokenizing: parsing strings into tokens
 --------------------------------------------------------------------------------  
@@ -57,7 +55,7 @@ pChordDur = setDur <$> pChord <*> (pSym ';' *> pNaturalRaw) where
 
 pChord :: Parser ChordLabel 
 pChord =     pChordLabel 
-         <|> (noneLabel <$ (pString "N" <|> pString "&pause"))
+         <|> (noneLabel    <$ (pString "N" <|> pString "&pause"))
          <|> (unknownLabel <$ (pString "*" <|> pString "X"))
 
 -- For now, I assume there is always a shorthand, and sometimes extra
@@ -96,17 +94,17 @@ pKey = f <$> pRoot <* pSym ':' <*> pShorthand
 -- TODO replace by more correct version in HarmTrace.Base.MusicRep      
 analyseDegsOld :: [Addition] -> Shorthand        
 analyseDegsOld d 
-  | (Note (Just Fl) I3)  `elem` d = Min
-  | (Note (Just Sh) I5)  `elem` d = Sev
-  | (Note (Just Fl) I7)  `elem` d = Sev
-  | (Note  Nothing  I7)  `elem` d = Maj7
-  | (Note (Just Fl) I9)  `elem` d = Sev
-  | (Note (Just Sh) I9)  `elem` d = Sev
-  | (Note  Nothing  I11) `elem` d = Sev
-  | (Note (Just Sh) I11) `elem` d = Sev
-  | (Note (Just Fl) I13) `elem` d = Sev
-  | (Note  Nothing  I13) `elem` d = Sev
-  | (Note  Nothing  I3)  `elem` d = Maj
+  | (Add (Note (Just Fl) I3 )) `elem` d = Min
+  | (Add (Note (Just Sh) I5 )) `elem` d = Sev
+  | (Add (Note (Just Fl) I7 )) `elem` d = Sev
+  | (Add (Note  Nothing  I7 )) `elem` d = Maj7
+  | (Add (Note (Just Fl) I9 )) `elem` d = Sev
+  | (Add (Note (Just Sh) I9 )) `elem` d = Sev
+  | (Add (Note  Nothing  I11)) `elem` d = Sev
+  | (Add (Note (Just Sh) I11)) `elem` d = Sev
+  | (Add (Note (Just Fl) I13)) `elem` d = Sev
+  | (Add (Note  Nothing  I13)) `elem` d = Sev
+  | (Add (Note  Nothing  I3 )) `elem` d = Maj
   | otherwise                     = Maj
    
 
@@ -144,13 +142,12 @@ pShorthand =     Maj      <$ pString "maj"
 -- We don't produce intervals for a shorthand. This could easily be added,
 -- though.
 pDegrees :: Parser [Addition]
-pDegrees = pPacked (pSym '(') (pSym ')') 
-                       (catMaybes <$> (pList1Sep (pSym ',') pDegree))
+pDegrees = pPacked (pSym '(') (pSym ')') ( pListSep (pSym ',') pDegree )
 
 -- TODO removing degrees is not implemented 
-pDegree :: Parser (Maybe Addition)
-pDegree =   (Just   <$> (Note <$> pMaybe pModifier <*> pInterval))
-            <|> Nothing <$  pSym '*' <* pMaybe pModifier <*  pInterval
+pDegree :: Parser Addition
+pDegree =   (Add   <$>              (Note <$> pMaybe pModifier <*> pInterval))
+        <|> (NoAdd <$> (pSym '*' *> (Note <$> pMaybe pModifier <*> pInterval)))
               
 pModifier :: Parser Modifier
 pModifier =     Sh <$ pSym    's'
