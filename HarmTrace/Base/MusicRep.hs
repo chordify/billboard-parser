@@ -176,6 +176,7 @@ toClassType sh
   | otherwise = error 
       ("HarmTrace.Base.MusicRep.toClassType: unknown shorthand: " ++ show sh)
 
+-- | Converts a 'Shorthand' to a 'Mode'
 toMode :: Shorthand -> Mode     
 toMode Maj     = MajMode
 toMode Min     = MinMode
@@ -192,9 +193,6 @@ toMode Min6    = MinMode
 toMode Nin     = MajMode
 toMode Maj9    = MajMode
 toMode Min9    = MinMode
--- toMode Five    = MajMode -- for now
--- toMode Sus2    = MajMode -- for now
--- toMode Sus4    = MajMode -- for now
 -- additional Billboard shorthands
 toMode Min11    = MinMode
 toMode Min13    = MinMode
@@ -202,8 +200,9 @@ toMode Maj13    = MajMode
 toMode Eleven   = MajMode
 toMode Thirteen = MajMode
 toMode m        = 
-  error ("HarmTrace.Base.MusicRep.toMode: unknown shorthand: " ++ show m)
+  error ("HarmTrace.Base.MusicRep.toMode: cannot convert shorthand: " ++ show m)
 
+-- | Converts a 'Shorthand' to 
 toMajMin :: Shorthand -> ClassType
 toMajMin Five   = NoClass
 toMajMin Sus2   = NoClass

@@ -30,9 +30,10 @@ parseDataWithErrors :: (ListLike s a, Show a)
 parseDataWithErrors p inp = (parse ( (,) <$> p <*> pEnd) 
                              (createStr (LineColPos 0 0 0) inp))
                                                  
--- | Parses specific string
+-- | Parses a specific string
 pString :: (ListLike state a, IsLocationUpdatedBy loc a, Show a, Eq a) 
         => [a] -> P (Str a state loc) [a]
+pString s = foldr (\a b -> (:) <$> a <*> b) (pure []) (map pSym s)
 
 -- | Parses UNIX and DOS/WINDOWS line endings
 pLineEnd :: Parser String
