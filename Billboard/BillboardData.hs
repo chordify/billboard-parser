@@ -165,4 +165,6 @@ showInMIREXFormat = concatMap showMIREX . getSong where
                      in case (chordRoot c, chordShorthand c) of
                           ((Note _ N), None ) -> "N"
                           ((Note _ X), _    ) -> "X"
-                          (r         , _    ) -> show r ++':' : show (toTriad c)
+                          (r         , _    ) -> case toTriad c of
+                                                   NoTriad -> show r ++ ":X"
+                                                   t   -> show r ++':' : show t
