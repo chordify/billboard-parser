@@ -219,12 +219,16 @@ data Fifth = DimFifth | PerfFifth | AugFifth | NoFifth deriving Eq
 -- NoTriad
 --
 toTriad :: Chord a -> Triad
-toTriad   (Chord  _r sh []  _loc _d) = shToTriad sh -- there are no degrees
-toTriad c@(Chord  _r sh add _loc _d) =  -- combine the degrees and analyse them
-  let degs = toDegreeList c -- here, also NoAdd degrees are resolved
-      
+toTriad   (Chord  _r sh []  _loc _d) = shToTriad sh -- there are no additions
+-- combine the degrees and analyse them. N.B., also NoAdd degrees are resolved
+toTriad c@(Chord  _r sh add _loc _d) = analyseDegTriad . toDegreeList $ c
+
+-- Analyses a degree list and returns 'MajTriad', 'MinTriad' or 'NoTriad' if
+-- the degrees make a chord a major, minor, or no triad, respectivly.
+analyseDegTriad :: [Addition] -> Triad
+analyseDegTriad degs = 
       -- analyses the third in a degree list
-      analyseThird :: [Addition] -> Third
+  let analyseThird :: [Addition] -> Third
       analyseThird d 
         | (Add (Note (Just Fl) I3)) `elem` d = MinThird
         | (Add (Note  Nothing  I3)) `elem` d = MajThird

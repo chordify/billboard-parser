@@ -62,21 +62,23 @@ pChord =     pChordLabel
 -- degrees. I guess it might be the case that sometimes there is no shorthand,
 -- but then there certainly are degrees. 
 pChordLabel :: Parser ChordLabel
-pChordLabel = f <$> pRoot <* pSym ':'  <*> pMaybe pShorthand
-           -- we ignore optional inversions for now
-           <*> ((pDegrees `opt` []) <* pInversion)
-  where f r (Just s)    [] = Chord r s [] 0 1
-        -- if there are no degrees and no shorthand (should not occur)
-        -- we make it a major chord
-        f r Nothing     [] = Chord r Maj [] 0 1
-        -- in case of there is no short hand we analyse the degree list
-        f r Nothing     d  = Chord r (analyseDegsOld d) d 0 1
-        f r (Just None) d  = Chord r (analyseDegsOld d) d 0 1
-        -- in case of a sus4/maj we also analyse the degree list
-        f r (Just Sus4) d  = Chord r (analyseDegsOld d) d 0 1
-        f r (Just Maj)  d  = Chord r (analyseDegsOld d) d 0 1
-        -- if we have another short hand we ignore the degrees list
-        f r (Just s)    d  = Chord r s d 0 1
+pChordLabel = toChord <$> pRoot <* pSym ':'  <*> pMaybe pShorthand
+                      -- we ignore optional inversions for now
+                      <*> ((pDegrees `opt` []) <* pInversion)
+  where -- if there are no degrees and no shorthand 
+        toChord :: Root -> Maybe Shorthand -> [Addition] -> ChordLabel
+        toChord r Nothing     [] = Chord r None [] 0 1
+        toChord r Nothing     d  = case analyseDegTriad d of
+                                     MajTriad -> Chord r Maj (remTriadDeg d) 0 1
+                                     MinTriad -> Chord r Min (remTriadDeg d) 0 1
+                                     AugTriad -> Chord r Aug (remTriadDeg d) 0 1
+                                     DimTriad -> Chord r Dim (remTriadDeg d) 0 1
+                                     NoTriad  -> Chord r None d 0 1
+        toChord r (Just s)    d  = Chord r s d 0 1
+        
+        -- removes the third and the fifth from a Addtion list
+        remTriadDeg :: [Addition] -> [Addition]
+        remTriadDeg = filter (\(Add (Note _ i)) -> i /= I3 || i /= I5)
 
 pInversion :: Parser (Maybe (Note Interval))
 pInversion = (Just <$> (pSym '/' *> (Note <$> pMaybe pModifier <*> pInterval))
@@ -88,26 +90,6 @@ pKey = f <$> pRoot <* pSym ':' <*> pShorthand
               | m == Min = Key r MinMode
               | otherwise = error ("Tokenizer: key must be Major or Minor, "
                           ++ "found: " ++ show m)
-                          
-
--- analyses a list of Degrees and assigns a shortHand i.e. Chord Class  
--- TODO replace by more correct version in HarmTrace.Base.MusicRep      
-analyseDegsOld :: [Addition] -> Shorthand        
-analyseDegsOld d 
-  | (Add (Note (Just Fl) I3 )) `elem` d = Min
-  | (Add (Note (Just Sh) I5 )) `elem` d = Sev
-  | (Add (Note (Just Fl) I7 )) `elem` d = Sev
-  | (Add (Note  Nothing  I7 )) `elem` d = Maj7
-  | (Add (Note (Just Fl) I9 )) `elem` d = Sev
-  | (Add (Note (Just Sh) I9 )) `elem` d = Sev
-  | (Add (Note  Nothing  I11)) `elem` d = Sev
-  | (Add (Note (Just Sh) I11)) `elem` d = Sev
-  | (Add (Note (Just Fl) I13)) `elem` d = Sev
-  | (Add (Note  Nothing  I13)) `elem` d = Sev
-  | (Add (Note  Nothing  I3 )) `elem` d = Maj
-  | otherwise                     = Maj
-   
-
 
 pShorthand :: Parser Shorthand
 pShorthand =     Maj      <$ pString "maj"
