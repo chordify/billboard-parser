@@ -21,10 +21,16 @@ import Data.List (genericLength)
 
 import HarmTrace.Audio.ChordTypes (TimedData, onset, offset, getData, Timed)
 
-import Billboard.BillboardParser ( parseBillboard
-                                 , acceptableBeatDeviationMultiplier)
+import Billboard.BillboardParser ( parseBillboard)
 import Billboard.BillboardData (BillboardData (..), BBChord (..), isNoneBBChord)
 import Billboard.IOUtils
+
+--------------------------------------------------------------------------------
+-- Constants
+--------------------------------------------------------------------------------
+
+testBeatDeviationMultiplier :: Double
+testBeatDeviationMultiplier = 0.075
 
 --------------------------------------------------------------------------------
 -- Top level testing functions
@@ -61,7 +67,7 @@ oddBeatLengthTest (bbd, bbid) =
 
 -- | Creates a test out of 'rangeCheck': this test reports on every chord 
 -- whether or not the beat length is within the the allowed range of 
--- beat length deviation, as set by 'acceptableBeatDeviationMultiplier'.
+-- beat length deviation, as set by 'testBeatDeviationMultiplier'.
 rangeTest :: Double -> Double -> TimedData BBChord -> Test
 rangeTest minLen maxLen t = 
   TestCase (assertBool  ("Odd Beat length detected for:\n" ++ showChord t) 
@@ -87,8 +93,8 @@ getMinMaxBeatLen song =
   let chds   = filter (not . isNoneBBChord . getData ) song
       avgLen = (sum $ map beatDuration chds) / (genericLength chds)
   in ( avgLen                                            -- average beat length
-     , avgLen *  acceptableBeatDeviationMultiplier       -- minimum beat length
-     , avgLen * (acceptableBeatDeviationMultiplier + 1)) -- maximum beat length
+     , avgLen *  testBeatDeviationMultiplier       -- minimum beat length
+     , avgLen * (testBeatDeviationMultiplier + 1)) -- maximum beat length
      
 --------------------------------------------------------------------------------
 -- Some testing related utitlities
