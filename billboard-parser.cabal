@@ -24,6 +24,11 @@ library
                        Billboard.BillboardData
                        Billboard.BillboardParser
                        Billboard.IOUtils
+                       HarmTrace.Audio.ChordTypes
+                       HarmTrace.Base.MusicRep
+                       HarmTrace.Base.Parsing
+                       HarmTrace.Tokenizer.Tokenizer
+                       HarmTrace.Tokenizer.Tokens
 
 executable billboard-parser
   main-is: main.hs    
