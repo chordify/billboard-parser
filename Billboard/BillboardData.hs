@@ -151,7 +151,8 @@ addLabel lab (c:cs)  = addStart lab c : foldr step [] cs where
 getBBChords :: BillboardData -> [BBChord]
 getBBChords = map getData . getSong 
 
--- | Shows the 'BillboardData' in MIREX format
+-- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
+-- :dim, sus2, sus4, and ignoring all chord additions
 showInMIREXFormat :: BillboardData -> String
 showInMIREXFormat = concatMap showMIREX . getSong where
 
@@ -165,6 +166,8 @@ showInMIREXFormat = concatMap showMIREX . getSong where
                      in case (chordRoot c, chordShorthand c) of
                           ((Note _ N), None ) -> "N"
                           ((Note _ X), _    ) -> "X"
+                          (r         , Sus2 ) -> show r ++ ":sus2"
+                          (r         , Sus4 ) -> show r ++ ":sus4"
                           (r         , _    ) -> case toTriad c of
-                                                   NoTriad -> show r ++ ":X"
+                                                   NoTriad ->  "X"
                                                    t   -> show r ++':' : show t
