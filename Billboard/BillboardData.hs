@@ -26,7 +26,7 @@ module Billboard.BillboardData ( BBChord (..), isChange, hasAnnotations
 
 -- HarmTrace stuff
 import HarmTrace.Base.MusicRep  hiding (isNone)
-import HarmTrace.Audio.ChordTypes (TimedData (..), getData, onset, offset)
+import HarmTrace.Base.MusicTime (TimedData (..), getData, onset, offset)
 
 import Billboard.BeatBar
 import Billboard.Annotation ( Annotation (..), isStart, isStruct

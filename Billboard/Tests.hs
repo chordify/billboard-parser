@@ -19,7 +19,7 @@ import Test.HUnit
 import Control.Monad (void)
 import Data.List (genericLength)
 
-import HarmTrace.Audio.ChordTypes (TimedData, onset, offset, getData, Timed)
+import HarmTrace.Base.MusicTime (TimedData, onset, offset, getData, Timed)
 
 import Billboard.BillboardParser ( parseBillboard)
 import Billboard.BillboardData (BillboardData (..), BBChord (..), isNoneBBChord)

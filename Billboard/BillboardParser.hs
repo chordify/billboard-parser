@@ -27,8 +27,8 @@ import Text.ParserCombinators.UU
 
 import HarmTrace.Base.Parsing hiding (pLineEnd)
 import HarmTrace.Base.MusicRep hiding (isNone)
-import HarmTrace.Audio.ChordTypes (TimedData (..), Timed (..))
-import HarmTrace.Tokenizer.Tokenizer (pRoot, pChord)
+import HarmTrace.Base.MusicTime(TimedData (..), Timed (..))
+import HarmTrace.Base.ChordTokenizer (pRoot, pChord)
 
 import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..), tatumsPerBar
                           , chordsPerDot )
