@@ -58,7 +58,18 @@ parseBillboard = parseDataWithErrors pBillboard
 pBillboard :: Parser BillboardData
 pBillboard = do (a, t, ts, r) <- pHeader
                 c             <- pChordLinesPost ts
-                return (BillboardData a t ts r c)
+                return (BillboardData a t ts r (setChordStartEnd c)) where
+  
+  -- marks the first and the last chords in the chord sequence in a post-
+  -- processing step
+  setChordStartEnd :: [TimedData BBChord] -> [TimedData BBChord]
+  setChordStartEnd = reverse . markFstLst Backward . reverse . markFstLst Forward 
+                  
+  markFstLst :: Direction -> [TimedData BBChord] -> [TimedData BBChord]
+  markFstLst d cs = let (n , fc : rest) = span (isNoneBBChord . getData) cs in case d of 
+    Forward  -> n ++ fmap (addStart (Anno Chords)) fc : rest
+    Backward -> n ++ fmap (addEnd   (Anno Chords)) fc : rest
+
              
 --------------------------------------------------------------------------------
 -- parsing meta data in the headers

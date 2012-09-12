@@ -61,7 +61,7 @@ data Description = Chorus  | Intro | Outro | Bridge  | Interlude | Solo
                  | Secondarytheme   | Ending    | PhraseTrans | Instrumental 
                  | Coda    | Transition | PreVerse   | Vocal  | Talking 
                  | TalkingEnd | Silence | Applause | Noise | SongEnd
-                 | ModulationSeg | PreIntro
+                 | ModulationSeg | PreIntro | Chords 
                  | Repeat Int
                  | Verse  (Maybe Int)
                  -- | a chord inserted by the posprocessing interpolation
