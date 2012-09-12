@@ -58,17 +58,7 @@ parseBillboard = parseDataWithErrors pBillboard
 pBillboard :: Parser BillboardData
 pBillboard = do (a, t, ts, r) <- pHeader
                 c             <- pChordLinesPost ts
-                return (BillboardData a t ts r (setChordStartEnd c)) where
-  
-  -- marks the first and the last chords in the chord sequence in a post-
-  -- processing step
-  setChordStartEnd :: [TimedData BBChord] -> [TimedData BBChord]
-  setChordStartEnd = reverse . markFstLst Backward . reverse . markFstLst Forward 
-                  
-  markFstLst :: Direction -> [TimedData BBChord] -> [TimedData BBChord]
-  markFstLst d cs = let (n , fc : rest) = span (isNoneBBChord . getData) cs in case d of 
-    Forward  -> n ++ fmap (addStart (Anno Chords)) fc : rest
-    Backward -> n ++ fmap (addEnd   (Anno Chords)) fc : rest
+                return (BillboardData a t ts r c) where
 
              
 --------------------------------------------------------------------------------
@@ -329,18 +319,34 @@ data Direction = Forward | Backward
 -- the 'interp'olation of the last line of annotated chords. Hence, we 
 -- use a different kind of interpolation for this last line of chords. We use 
 -- the average beat length of the previous line to predict the beat durations 
--- of the chords and fill the \gap\ between the last chord and the \silence\ 
+-- of the chords and fill the /gap/ between the last chord and the /silence/
 -- annotation with additional 'N' chords.
-fixOddLongBeats :: Direction -> Double -> [TimedData [BBChord]] -> [TimedData [BBChord]]
-fixOddLongBeats dir beatDev song = sil ++ fixOddLongLine cs  where
+fixOddLongBeats :: Direction -> Double -> [TimedData [BBChord]] 
+                -> [TimedData [BBChord]]
+fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ cs)  where
 
   -- separate the lines containing silence N chords at the beginning
   -- from the lines that contain musical chords
-  (sil,cs) = break (and . map (not . isNoneBBChord) . getData) song
-  -- precalculate the average beat length, filtering lines that contain
+  (sil,cs) = break (not . and . map (isNoneBBChord) . getData) song
+  -- precalculate the average beat length, filtering lines that contain 
   -- none harmonic data (in the from of N chords)
   avgBt = avgBeatLens . filter (and . map (not . isNoneBBChord) . getData ) $ cs        
-    
+  
+  -- Marks the start and beginning of the chords sequence
+  markStartEnd :: Direction -> [TimedData [BBChord]] -> [TimedData [BBChord]]
+  markStartEnd _        []         = []
+  markStartEnd Forward  (fc : rst) = fmap markStart fc : rst
+  markStartEnd Backward (fc : rst) = fmap markEnd  fc : rst  
+  
+  -- does the actual marking
+  markStart, markEnd :: [BBChord] -> [BBChord]
+  markStart  [] = []
+  markStart (h:t) = addStart (Anno Chords) h : t
+  markEnd    [] = []
+  markEnd l = let (lst : rst) = reverse l 
+              in reverse (addEnd (Anno Chords) lst : rst)
+  
+  -- Fixes the distorted interpolation
   fixOddLongLine :: [TimedData [BBChord]] -> [TimedData [BBChord]]
   fixOddLongLine (l : n : ls ) = 
     case (avgBeatLen l >= ((1 + beatDev) * avgBt), dir) of
