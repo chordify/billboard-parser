@@ -116,17 +116,6 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
 -- Parsing Billboard data verbosely
 -------------------------------------------------------------------------------- 
 
--- test :: Int -> IO ()
--- test nr = getBBFile nr >>= mainTest
-
--- testAllBB :: IO ()
--- testAllBB = do dirs <- getDirectoryContents billboardLoc
-               -- dirTest . map f $ filter isDir dirs where
-                 -- f d = billboardLoc </> d </> "salami_chords.txt"
-
--- parseBB :: FilePath -> Int -> IO ()
--- parseBB fp nr = getBBFile fp nr >>= oneFile
-
 parseFile :: FilePath -> IO ()
 parseFile fp = do inp <- readFile fp
                   let (bbd, err) = parseBillboard inp

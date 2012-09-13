@@ -19,9 +19,9 @@
 module Billboard.BillboardData ( BBChord (..), isChange, hasAnnotations
                                , isStructSegStart, isNoneBBChord, noneBBChord
                                , BillboardData (..), Artist, Title, Meta (..)
-                               , getBBChords, filterNoneChords
+                               , getBBChords, getBBChordsNoSilence
                                , addStart, addEnd, addLabel, addStartEnd
-                               , showInMIREXFormat, isEnd
+                               , showInMIREXFormat, isEnd, removeSilence
                                ) where
 
 -- HarmTrace stuff
@@ -30,7 +30,8 @@ import HarmTrace.Base.MusicTime (TimedData (..), getData, onset, offset)
 
 import Billboard.BeatBar
 import Billboard.Annotation ( Annotation (..), isStart, isStruct
-                            , getLabel, Label, isEndAnno)
+                            , getLabel, Label, isEndAnno
+                            , isFirstChord, isLastChord)
 
 import Data.List (partition)
 
@@ -105,10 +106,6 @@ isChange c = case weight c of
   Change    -> True
   UnAligned -> error "BBChord.isChange: the BBChord is not beat aligned"
   _         -> False
-
--- | Filters chords that have not annotated root or shorthand
-filterNoneChords :: [BBChord] -> [BBChord]
-filterNoneChords = filter (not . isNoneBBChord)
   
 -- | Returns True if the 'BBChord' is a 'noneBBChord', i.e. has not root note 
 -- and no shorthand
@@ -117,11 +114,17 @@ isNoneBBChord = isNoneChord . chord
 
 -- Returns True if this 'BBChord' is the last (N) chord of the song
 isEnd :: BBChord -> Bool
-isEnd c = isNoneBBChord c && (or . map isEndAnno . annotations $ c )
+isEnd c = isNoneBBChord c && hasAnnotation isEndAnno c 
 
--- | Returns True if the 'BBChord' has any 'Boundary's and false otherwise
+-- | Returns True if the 'BBChord' has any 'Annotations's and false otherwise
 hasAnnotations :: BBChord -> Bool
 hasAnnotations = not . null . annotations
+
+-- | Takes an 'Annotation' predicate and checks if it holds for a 'BBChord'
+hasAnnotation :: (Annotation -> Bool) -> BBChord -> Bool
+hasAnnotation f c = case annotations c of
+  [] -> False
+  a  -> or . map f $ a
 
 -- | Adds a starting point of an 'Annotation' 'Label' to a 'BBChord'
 addStart :: Label -> BBChord -> BBChord
@@ -146,10 +149,28 @@ addLabel lab (c:cs)  = addStart lab c : foldr step [] cs where
   step x [] = [addEnd lab x] -- add a label to the last element of the list
   step x xs = x : xs
 
--- | Strips the time stamps from BillBoardData and concatnates all 'BBChords',
--- it also removes all NoneChords
+-- | Strips the time stamps from BillBoardData and concatnates all 'BBChords'
+-- and removes the silence at the beginning and end of the song by combining
+-- 'getBBChords' and 'removeSilence'.
+getBBChordsNoSilence :: BillboardData -> [BBChord]
+getBBChordsNoSilence = removeSilence . getBBChords
+  
+-- | Strips the time stamps from BillBoardData and concatnates all 'BBChords'
 getBBChords :: BillboardData -> [BBChord]
-getBBChords = map getData . getSong 
+getBBChords = map getData . getSong
+
+-- Removes the Silence, Applause, and other non-harmonic None chords at the
+-- beginning and end of a piece
+removeSilence :: [BBChord] -> [BBChord]
+removeSilence = takeIncl  (not . hasAnnotation isLastChord ) .
+                dropWhile (not . hasAnnotation isFirstChord) where
+  -- Does exactly the same as 'takeWhile' but includes the element for which
+  -- the predicate holds. For example takeIncl (< 3) [1..5] = [1, 2, 3]
+  takeIncl :: (a -> Bool) -> [a] -> [a]
+  takeIncl _ []     = [ ]
+  takeIncl p (x:xs) 
+     | p x          =  x : takeIncl p xs
+     | otherwise    = [x]
 
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions

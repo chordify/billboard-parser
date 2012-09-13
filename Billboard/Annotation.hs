@@ -16,7 +16,7 @@
 module Billboard.Annotation ( Annotation (..), Label (..), isStruct
                 , isStart, Instrument (..), Description (..)
                 , isUnknown, getLabel, isRepeat, getRepeats
-                , isEndAnno) where
+                , isEndAnno, isFirstChord, isLastChord) where
 
 import HarmTrace.Base.MusicRep (Root)
 
@@ -107,6 +107,16 @@ isEndAnno  _                   = False
 isRepeat :: Annotation -> Bool
 isRepeat (End (Anno (Repeat _))) = True
 isRepeat _                       = False
+
+-- | Returns True if the 'Annotation' marks the start of a chord sequence
+isFirstChord :: Annotation -> Bool
+isFirstChord (Start (Anno Chords)) = True
+isFirstChord _                     = False
+
+-- | Returns True if the 'Annotation' marks the end of a chord sequence
+isLastChord :: Annotation -> Bool
+isLastChord (End (Anno Chords)) = True
+isLastChord _                   = False
 
 -- | Returns the number of repeats represented by this 'Annotation'. If the
 -- 'Annotation' describes something completely different (say 'Electricsitar')
