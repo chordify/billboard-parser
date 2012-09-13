@@ -21,7 +21,7 @@ module Billboard.BillboardData ( BBChord (..), isChange, hasAnnotations
                                , BillboardData (..), Artist, Title, Meta (..)
                                , getBBChords, getBBChordsNoSilence
                                , addStart, addEnd, addLabel, addStartEnd
-                               , showInMIREXFormat, isEnd, removeSilence
+                               , showInMIREXFormat, isEnd,
                                ) where
 
 -- HarmTrace stuff
@@ -148,22 +148,22 @@ addLabel lab (c:cs)  = addStart lab c : foldr step [] cs where
   step :: BBChord -> [BBChord] -> [BBChord]
   step x [] = [addEnd lab x] -- add a label to the last element of the list
   step x xs = x : xs
-
--- | Strips the time stamps from BillBoardData and concatnates all 'BBChords'
--- and removes the silence at the beginning and end of the song by combining
--- 'getBBChords' and 'removeSilence'.
-getBBChordsNoSilence :: BillboardData -> [BBChord]
-getBBChordsNoSilence = removeSilence . getBBChords
   
 -- | Strips the time stamps from BillBoardData and concatnates all 'BBChords'
 getBBChords :: BillboardData -> [BBChord]
 getBBChords = map getData . getSong
 
--- Removes the Silence, Applause, and other non-harmonic None chords at the
--- beginning and end of a piece
-removeSilence :: [BBChord] -> [BBChord]
-removeSilence = takeIncl  (not . hasAnnotation isLastChord ) .
-                dropWhile (not . hasAnnotation isFirstChord) where
+-- | Strips the time stamps from BillBoardData and concatnates all 'BBChords'
+-- and removes the silence at the beginning and end of the song.
+getBBChordsNoSilence :: BillboardData -> [BBChord]
+getBBChordsNoSilence = removeSilence . getBBChords where
+
+  -- Removes the Silence, Applause, and other non-harmonic None chords at the
+  -- beginning and end of a piece
+  removeSilence :: [BBChord] -> [BBChord]
+  removeSilence = takeIncl  (not . hasAnnotation isLastChord ) .
+                  dropWhile (not . hasAnnotation isFirstChord) 
+                  
   -- Does exactly the same as 'takeWhile' but includes the element for which
   -- the predicate holds. For example takeIncl (< 3) [1..5] = [1, 2, 3]
   takeIncl :: (a -> Bool) -> [a] -> [a]
