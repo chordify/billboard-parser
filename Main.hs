@@ -42,7 +42,7 @@ outputFileName = "mirex_chords" <.> "txt"
 --------------------------------------------------------------------------------
 -- Commandline argument parsing
 --------------------------------------------------------------------------------
-data ReppatArgs = InputFilepath | InputDirFilepath | InputID | ModeArg
+data ReppatArgs = InputFilepath | InputDirFilepath | InputID | ModeArg | OutDir
                   deriving (Eq, Ord, Show)
 
 myArgs :: [Arg ReppatArgs]
@@ -53,6 +53,12 @@ myArgs = [
                  argData  = argDataRequired "(parse|mirex|test)" ArgtypeString,
                  argDesc  = "The operation mode (parse|mirex|test)"
                }
+        ,  Arg { argIndex = OutDir,
+                 argAbbr  = Just 'o',
+                 argName  = Just "out",
+                 argData  = argDataOptional "filepath" ArgtypeString,
+                 argDesc  = "Output directory for the mirex files"
+               }               
          , Arg { argIndex = InputFilepath,
                  argAbbr  = Just 'f',
                  argName  = Just "file",
@@ -63,7 +69,7 @@ myArgs = [
                  argAbbr  = Just 'd',
                  argName  = Just "dir",
                  argData  = argDataOptional "filepath" ArgtypeString,
-                 argDesc  = "Input base directory path to the billboard dataset"
+                 argDesc  = "Base directory path to the billboard dataset"
                }
          , Arg { argIndex = InputID,
                  argAbbr  = Just 'i',
@@ -90,6 +96,7 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
               inFile = getArg arg InputFilepath
               inDir  = getArg arg InputDirFilepath
               bbid   = getArg arg InputID
+              mout   = getArg arg OutDir
               
           -- the input is either a file (Left) or a directory (Right)
           input  <-  case (inFile, inDir, bbid) of
@@ -104,7 +111,7 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
           -- do the parsing magic
           case (mode, input) of
             (Mirex, Left  f) -> mirexFile f
-            (Mirex, Right d) -> void (mirexDir d)
+            (Mirex, Right d) -> void (mirexDir mout d)
             (Parse, Left  f) -> parseFile f
             (Parse, Right d) -> parseDir d
             (Test , Left  f) -> mainTestFile f
@@ -155,16 +162,20 @@ mirexFile f = readFile f >>= putStrLn . showInMIREXFormat . fst . parseBillboard
 
 -- Reads a directory an writes a file with the chords in mirex format in the 
 -- folder containing also the original file
-mirexDir :: FilePath -> IO [String]
-mirexDir d = bbdir toMirex d where
+mirexDir :: Maybe FilePath -> FilePath -> IO [String]
+mirexDir mfp d = getBBFiles d >>= mapM toMirex where
 
   -- read, parses, and writes one mirex chord file
-  toMirex :: FilePath -> IO (String)
-  toMirex f = 
+  toMirex :: (FilePath, Int) -> IO (String)
+  toMirex (f,i) = -- (filename, id)
     do inp <- readFile f
        let (bbd, err) = parseBillboard inp
            s          = showInMIREXFormat bbd
-           out        = (dropFileName f) </> outputFileName
+           out        = case mfp of 
+                          -- place the file next to the input file (but rename)
+                          Nothing -> dropFileName f </> outputFileName
+                          -- place teh output file in a specific folder (if set)
+                          Just fp -> fp </> show i ++ "_audio.lab"
        when (not $ null err) (error ("there were errors in file: " ++ f))
        writeFile out s
        putStrLn ("written file: " ++ out)
