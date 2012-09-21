@@ -31,6 +31,7 @@ import HarmTrace.Base.MusicTime (TimedData (..))
 import System.Console.ParseArgs
 import System.FilePath
 import Control.Monad (when, void)
+import Text.Printf (printf)
 
 --------------------------------------------------------------------------------
 -- Contants
@@ -175,7 +176,7 @@ mirexDir mfp d = getBBFiles d >>= mapM toMirex where
                           -- place the file next to the input file (but rename)
                           Nothing -> dropFileName f </> outputFileName
                           -- place teh output file in a specific folder (if set)
-                          Just fp -> fp </> show i ++ "_audio.lab"
+                          Just fp -> fp </>  printf "%.4d" i ++ "_audio.lab"
        when (not $ null err) (error ("there were errors in file: " ++ f))
        writeFile out s
        putStrLn ("written file: " ++ out)
