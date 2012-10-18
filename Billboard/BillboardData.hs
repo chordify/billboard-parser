@@ -16,12 +16,30 @@
 -- 2011. (<http://ismir2011.ismir.net/papers/OS8-1.pdf>) 
 --------------------------------------------------------------------------------
 
-module Billboard.BillboardData ( BBChord (..), isChange, hasAnnotations
-                               , isStructSegStart, isNoneBBChord, noneBBChord
-                               , BillboardData (..), Artist, Title, Meta (..)
-                               , getBBChords, getBBChordsNoSilence
-                               , addStart, addEnd, addLabel, addStartEnd
-                               , showInMIREXFormat, isEnd, getStructAnn
+module Billboard.BillboardData ( -- * The BillBoard data representation
+                                 BillboardData (..)
+                               , Meta (..)
+                               , BBChord (..)                               
+                               , Artist
+                               , Title
+                               , noneBBChord
+                               -- * BillBoard data utilities
+                               -- ** Data access
+                               , getBBChords
+                               , getBBChordsNoSilence
+                               , addStart
+                               , addEnd
+                               , addLabel
+                               , addStartEnd
+                               , getStructAnn
+                               -- ** Tests
+                               , isStructSegStart
+                               , isNoneBBChord
+                               , isChange
+                               , hasAnnotations
+                               , isEnd
+                               -- * Showing
+                               , showInMIREXFormat
                                ) where
 
 -- HarmTrace stuff

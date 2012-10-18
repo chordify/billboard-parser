@@ -13,10 +13,25 @@
 -- aims at representing these as Haskell types
 --------------------------------------------------------------------------------
 
-module Billboard.Annotation ( Annotation (..), Label (..), isStruct
-                , isStart, Instrument (..), Description (..)
-                , isUnknown, getLabel, isRepeat, getRepeats
-                , isEndAnno, isFirstChord, isLastChord) where
+module Billboard.Annotation ( -- * Types for storing annotations encountered
+                              --   in the Billboard dataset
+                              Annotation (..)
+                            , Label (..)
+                            , Instrument (..)
+                            , Description (..)
+                              -- *  Utilities
+                              -- ** Tests
+                            , isStruct
+                            , isStart
+                            , isUnknown
+                            , isRepeat
+                            , isEndAnno
+                            , isFirstChord
+                            , isLastChord
+                              -- ** Data access
+                            , getRepeats
+                            , getLabel
+                            ) where
 
 import HarmTrace.Base.MusicRep (Root)
 
