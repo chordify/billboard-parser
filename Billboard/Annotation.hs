@@ -13,8 +13,7 @@
 -- aims at representing these as Haskell types
 --------------------------------------------------------------------------------
 
-module Billboard.Annotation ( -- * Types for storing annotations encountered
-                              --   in the Billboard dataset
+module Billboard.Annotation ( -- * Types for storing annotations encountered in the Billboard dataset
                               Annotation (..)
                             , Label (..)
                             , Instrument (..)

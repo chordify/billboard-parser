@@ -191,9 +191,9 @@ getBBChordsNoSilence = removeSilence . getBBChords where
      | otherwise    = [x]
 
 -- | Returns the structural segmentation 'Annotation's, 
--- given a list of 'BBChord's
-getStructAnn :: [BBChord] -> [Annotation]
-getStructAnn = filter ( isStruct . getLabel ) . concatMap annotations
+-- given a 'BBChord'
+getStructAnn :: BBChord -> [Annotation]
+getStructAnn = filter ( isStruct . getLabel ) . annotations
      
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions
