@@ -31,6 +31,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , addEnd
                                , addLabel
                                , addStartEnd
+                               , getDuration
                                , getStructAnn
                                -- ** Tests
                                , isStructSegStart
@@ -38,6 +39,8 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , isChange
                                , hasAnnotations
                                , isEnd
+                               -- ** Chord reduction
+                               , reduceBBChords
                                -- * Showing
                                , showInMIREXFormat
                                ) where
@@ -98,6 +101,7 @@ instance Ord BBChord where
     | otherwise  = rt where
         rt = compare (chordRoot a) (chordRoot b)
 
+-- TODO replace by derived EQ, use a specific EQ where needed.
 instance Eq BBChord where
   (BBChord _ _ a) == (BBChord _ _ b) = chordRoot a == chordRoot b && 
                                        toTriad   a == toTriad   b
@@ -166,6 +170,26 @@ addLabel lab (c:cs)  = addStart lab c : foldr step [] cs where
   step :: BBChord -> [BBChord] -> [BBChord]
   step x [] = [addEnd lab x] -- add a label to the last element of the list
   step x xs = x : xs
+
+-- | Sets the indexes of a list of BBChords (starting at 0)
+setChordIxs :: [BBChord] -> [BBChord]
+setChordIxs cs = zipWith setChordIx cs [0..]
+  
+-- sets the index of a 'BBChord' (should not be exported)
+setChordIx :: BBChord -> Int -> BBChord 
+setChordIx rc i = let x = chord rc in rc {chord = x {getLoc = i} }
+
+-- | Returns the duration of the chord (the unit of the duration can be 
+-- application dependend, but will generally be measured in eighth notes)
+-- If the data comes directly from the parser the duration will be 1 for
+-- all 'BBChord's. However, if it has been \reduced\ with 'reduceBBChords'
+-- the duration will be the number of consecutive tatum units.
+getDuration :: BBChord -> Int
+getDuration = duration . chord
+
+-- sets the duration of an 'BBChord'
+setDuration :: BBChord -> Int -> BBChord
+setDuration c i = let x = chord c in c { chord = x { duration = i } }
   
 -- | Strips the time stamps from BillBoardData and concatnates all 'BBChords'
 getBBChords :: BillboardData -> [BBChord]
@@ -194,6 +218,63 @@ getBBChordsNoSilence = removeSilence . getBBChords where
 -- given a 'BBChord'
 getStructAnn :: BBChord -> [Annotation]
 getStructAnn = filter ( isStruct . getLabel ) . annotations
+
+--------------------------------------------------------------------------------
+-- Utilities
+--------------------------------------------------------------------------------
+
+-- | Given a list of 'BBChord's that have a certain duration (i.e. the number of 
+-- beats that the chord should sound), every 'BBChord' is replaced by x 
+-- 'BBChord'swith the same properties, but whit a duration of 1 beat, where x is
+-- the duration of the original 'BBChord'
+expandRChordDur :: [BBChord] -> [BBChord]
+expandRChordDur = setChordIxs . concatMap replic where
+  replic c = let x = setDuration c 1 
+             in  x : replicate (pred . duration $ chord c) 
+                               x { weight = Beat, annotations = []}
+                               
+-- TODO: move to Billboard.BillboardData
+-- | The inverse function of 'expandChordDur': given a list of 'BBChords' that 
+-- all have a duration of 1 beat, all subsequent x 'BBChords' with the same 
+-- label are grouped into one 'BBChord' with durations x.
+reduceBBChords :: [BBChord] -> [BBChord]
+reduceBBChords = setChordIxs . foldr group []  where
+  
+  group :: BBChord -> [BBChord] -> [BBChord]
+  group c [] = [c]
+  group c (h:t)
+    | c `bbChordEq` h  = setDuration c (succ . duration $ chord h): t
+    | otherwise        = c : h : t
+
+  -- keep groupBBChord and expandChordDur "inverseable" we use a more strict
+  -- 'BBChord' equallity  
+  bbChordEq :: BBChord -> BBChord -> Bool
+  bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) = 
+    chordRoot cA      == chordRoot cB && 
+    chordShorthand cA == chordShorthand cB && 
+    chordAdditions cA == chordAdditions cB &&
+    anA          `annEq` anB &&
+    btA         `beatEq` btB
+  
+  annEq :: [Annotation] -> [Annotation] -> Bool
+  annEq [] [] = True
+  annEq _  [] = True
+  annEq a  b  = a == b
+    
+  beatEq :: BeatWeight -> BeatWeight -> Bool  
+  -- beatEq Beat Bar  = True
+  beatEq LineStart Beat = True
+  beatEq Bar       Beat = True
+  beatEq Change    Beat = True
+  beatEq Bar       Bar  = False
+  beatEq a         b   = a == b
+  
+  -- bbToRChord :: BBChord -> RChord
+  -- bbToRChord (BBChord _ _ c) = RChord [] Change c
+
+--------------------------------------------------------------------------------
+-- Printing chord sequences
+--------------------------------------------------------------------------------
      
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions

@@ -18,7 +18,7 @@
 
 module Main (main) where
 
-import Billboard.BillboardData ( BBChord (..), getBBChords
+import Billboard.BillboardData ( BBChord (..), getBBChords, reduceBBChords
                                , BillboardData(..), getTitle, showInMIREXFormat)
 import Billboard.BillboardParser ( parseBillboard )
 import Billboard.Tests (mainTestFile, mainTestDir)
@@ -135,7 +135,8 @@ printBillboard :: BillboardData -> IO()
 printBillboard bbd = 
   do putStrLn (getArtist bbd ++ ": " ++ getTitle bbd)
      putStr $ concatMap (\x -> ' ' : show x) (getBBChords bbd)
-     putStr " |\n" 
+     putStr " |\n\n" 
+     putStr $ concatMap (\x -> ' ' : show x) (reduceBBChords $ getBBChords bbd)
 
 -- parses a directory of Billboard songs
 parseDir :: FilePath -> IO ()
