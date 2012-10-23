@@ -19,9 +19,11 @@
 module Main (main) where
 
 import Billboard.BillboardData ( BBChord (..), getBBChords, reduceBBChords
-                               , BillboardData(..), getTitle, showInMIREXFormat)
+                               , BillboardData(..), getTitle, showInMIREXFormat
+                               , expandBBChords)
 import Billboard.BillboardParser ( parseBillboard )
-import Billboard.Tests (mainTestFile, mainTestDir)
+import Billboard.Tests (mainTestFile, mainTestDir
+                       , oddBeatLengthTest, reduceTest)
 import Billboard.IOUtils 
 
 -- harmtrace imports
@@ -116,8 +118,8 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
             (Parse, Left  f) -> parseFile f
             (Parse, Right d) -> parseDir d
             (Test , Left  f) -> mainTestFile f
-            (Test , Right d) -> mainTestDir d
-
+            (Test , Right d) -> -- mainTestDir oddBeatLengthTest d
+                                mainTestDir reduceTest d
             
 
 --------------------------------------------------------------------------------
@@ -136,7 +138,10 @@ printBillboard bbd =
   do putStrLn (getArtist bbd ++ ": " ++ getTitle bbd)
      putStr $ concatMap (\x -> ' ' : show x) (getBBChords bbd)
      putStr " |\n\n" 
-     putStr $ concatMap (\x -> ' ' : show x) (reduceBBChords $ getBBChords bbd)
+     let cs = reduceBBChords $ getBBChords bbd
+     putStr $ concatMap (\x -> ' ' : show x) cs
+     if getBBChords bbd == expandBBChords cs then putStrLn "\nMatch!"
+                                             else putStrLn "\n*** NO MATCH ***"
 
 -- parses a directory of Billboard songs
 parseDir :: FilePath -> IO ()

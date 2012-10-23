@@ -13,7 +13,10 @@
 -- Summary: A set of unit tests for testing the billboard-parser
 --------------------------------------------------------------------------------
 
-module Billboard.Tests ( mainTestFile, mainTestDir ) where
+module Billboard.Tests ( mainTestFile
+                       , mainTestDir
+                       , oddBeatLengthTest 
+                       , reduceTest ) where
 
 import Test.HUnit
 import Control.Monad (void)
@@ -22,7 +25,8 @@ import Data.List (genericLength)
 import HarmTrace.Base.MusicTime (TimedData, onset, offset, getData, Timed)
 
 import Billboard.BillboardParser ( parseBillboard)
-import Billboard.BillboardData (BillboardData (..), BBChord (..), isNoneBBChord)
+import Billboard.BillboardData ( BillboardData (..), BBChord (..), isNoneBBChord
+                               , reduceBBChords, expandBBChords, getBBChords )
 import Billboard.IOUtils
 
 --------------------------------------------------------------------------------
@@ -45,9 +49,9 @@ mainTestFile fp =
      void . runTestTT . applyTestToList (rangeTest minLen maxLen) $ song
 
 -- | testing a directory of files
-mainTestDir :: FilePath -> IO ()
-mainTestDir fp = getBBFiles fp >>= mapM readParse >>=
-                 void . runTestTT . applyTestToList oddBeatLengthTest where
+mainTestDir :: ((BillboardData, Int) -> Test )-> FilePath -> IO ()
+mainTestDir t fp = getBBFiles fp >>= mapM readParse >>=
+                 void . runTestTT . applyTestToList t where
 
   readParse :: (FilePath, Int) -> IO (BillboardData, Int)
   readParse (f,i) = readFile f >>= return . (,i) . fst . parseBillboard
@@ -95,7 +99,13 @@ getMinMaxBeatLen song =
   in ( avgLen                                            -- average beat length
      , avgLen *  testBeatDeviationMultiplier       -- minimum beat length
      , avgLen * (testBeatDeviationMultiplier + 1)) -- maximum beat length
-     
+
+-- | Tests the whether: ('expandBBChords' . 'reduceBBChords' $ cs) == cs
+reduceTest :: (BillboardData, Int) -> Test
+reduceTest (bbd, i) = let cs = getBBChords bbd
+                 in TestCase (assertBool ("reduce mismatch for id " ++ show i)
+                             ((expandBBChords . reduceBBChords $ cs) == cs))
+
 --------------------------------------------------------------------------------
 -- Some testing related utitlities
 --------------------------------------------------------------------------------

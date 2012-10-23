@@ -41,6 +41,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , isEnd
                                -- ** Chord reduction
                                , reduceBBChords
+                               , expandBBChords
                                -- * Showing
                                , showInMIREXFormat
                                ) where
@@ -227,8 +228,8 @@ getStructAnn = filter ( isStruct . getLabel ) . annotations
 -- beats that the chord should sound), every 'BBChord' is replaced by x 
 -- 'BBChord'swith the same properties, but whit a duration of 1 beat, where x is
 -- the duration of the original 'BBChord'
-expandRChordDur :: [BBChord] -> [BBChord]
-expandRChordDur = setChordIxs . concatMap replic where
+expandBBChords :: [BBChord] -> [BBChord]
+expandBBChords = setChordIxs . concatMap replic where
   replic c = let x = setDuration c 1 
              in  x : replicate (pred . duration $ chord c) 
                                x { weight = Beat, annotations = []}
