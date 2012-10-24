@@ -452,18 +452,20 @@ pZSilence = endChord <$>
       <|> Just <$> pSilence) where
   -- if there are silence annotations add them to a N chord
   endChord :: Maybe Label -> BBChord
-  endChord = maybe noneBBChord ((flip addStartEnd) noneBBChord)  
+  endChord = maybe noneC ((flip addStartEnd) noneC)  
   
--- recognises a "silence" annotation, no chords are sounding
-pSilence :: Parser Label
-pSilence = Anno <$> (Silence    <$ pString "silence" 
-                <|>  Noise      <$ pString "noise"
-                <|>  Applause   <$ pString "applause"
-                <|>  TalkingEnd <$ pString "talking" 
-                <|>  Fadeout    <$ pString "fadeout" 
-                <|>  PreIntro   <$ pString "pre" <* pMabSpcDsh  
-                                                 <* pString "intro")
-                                                  
+  noneC = addStart (Struct 'Z' 0) noneBBChord
+  
+  -- recognises a "silence" annotation, no chords are sounding
+  pSilence :: Parser Label
+  pSilence = Anno <$> (Silence    <$ pString "silence" 
+                  <|>  Noise      <$ pString "noise"
+                  <|>  Applause   <$ pString "applause"
+                  <|>  TalkingEnd <$ pString "talking" 
+                  <|>  Fadeout    <$ pString "fadeout" 
+                  <|>  PreIntro   <$ pString "pre" <* pMabSpcDsh  
+                                                   <* pString "intro")
+                                                    
 -- parses the end of a song
 pSongEnd :: Parser BBChord
 pSongEnd = (flip addEnd) noneBBChord <$> ((Anno SongEnd) <$ pString "end")
