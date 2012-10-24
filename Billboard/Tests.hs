@@ -17,6 +17,7 @@ module Billboard.Tests ( mainTestFile
                        , mainTestDir
                        , oddBeatLengthTest 
                        , reduceTest 
+                       , reduceTestVerb
                        , rangeTest) where
 
 import Test.HUnit
@@ -24,6 +25,7 @@ import Control.Monad (void)
 import Data.List (genericLength)
 
 import HarmTrace.Base.MusicTime (TimedData, onset, offset, getData, Timed)
+import HarmTrace.Base.MusicRep (Chord (..))
 
 import Billboard.BillboardParser ( parseBillboard)
 import Billboard.BillboardData ( BillboardData (..), BBChord (..), isNoneBBChord
@@ -109,9 +111,30 @@ getMinMaxBeatLen song =
 
 -- | Tests whether: ('expandBBChords' . 'reduceBBChords' $ cs) == cs
 reduceTest :: (BillboardData, Int) -> Test
-reduceTest (bbd, i) = let cs = getBBChords bbd
-                 in TestCase (assertBool ("reduce mismatch for id " ++ show i)
-                             ((expandBBChords . reduceBBChords $ cs) == cs))
+reduceTest (bbd, i) = 
+  let cs = getBBChords bbd
+  in TestCase 
+       (assertBool ("reduce mismatch for id " ++ show i)
+       (and $ zipWith bbChordEq (expandBBChords . reduceBBChords $ cs) cs))
+
+-- | Tests whether: ('expandBBChords' . 'reduceBBChords' $ cs) == cs
+reduceTestVerb :: BillboardData -> IO Test
+reduceTestVerb bbd = do let cs = getBBChords bbd
+                        return . applyTestToList cTest $ 
+                          zip (expandBBChords . reduceBBChords $ cs) cs where 
+                          
+  cTest :: (BBChord, BBChord) -> Test 
+  cTest (a,b) = TestCase 
+    (assertBool ("non-maching chords: " ++ show a ++ " and " ++ show b)
+    (a `bbChordEq` b))
+
+-- compares to 'BBChord's, thoroughly 
+bbChordEq :: BBChord -> BBChord -> Bool
+bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
+  anA == anB && btA == btB && 
+  chordRoot cA      == chordRoot cB && 
+  chordShorthand cA == chordShorthand cB && 
+  chordAdditions cA == chordAdditions cB 
 
 --------------------------------------------------------------------------------
 -- Some testing related utitlities

@@ -23,7 +23,7 @@ import Billboard.BillboardData ( BBChord (..), getBBChords, reduceBBChords
                                , expandBBChords)
 import Billboard.BillboardParser ( parseBillboard )
 import Billboard.Tests ( mainTestFile, mainTestDir, rangeTest
-                       , oddBeatLengthTest, reduceTest)
+                       , oddBeatLengthTest, reduceTest, reduceTestVerb)
 import Billboard.IOUtils 
 
 -- harmtrace imports
@@ -117,7 +117,8 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
             (Mirex, Right d) -> void (mirexDir mout d)
             (Parse, Left  f) -> parseFile f
             (Parse, Right d) -> parseDir d
-            (Test , Left  f) -> mainTestFile rangeTest f
+            (Test , Left  f) -> -- mainTestFile rangeTest f
+                                mainTestFile reduceTestVerb f
             (Test , Right d) -> -- mainTestDir oddBeatLengthTest d
                                 mainTestDir reduceTest d
             
@@ -141,8 +142,8 @@ printBillboard bbd =
      let cs = reduceBBChords $ getBBChords bbd
      putStr $ concatMap (\x -> ' ' : show x) cs
      if getBBChords bbd == expandBBChords cs then putStrLn "\nMatch!"
-                                             else putStrLn "\n*** NO MATCH ***"
-
+           else do putStrLn "\n*** NO MATCH ***"
+                   putStr $ concatMap (\x -> ' ' : show x) (expandBBChords cs)
 -- parses a directory of Billboard songs
 parseDir :: FilePath -> IO ()
 parseDir d = void . bbdir oneSliceSalami $ d where
