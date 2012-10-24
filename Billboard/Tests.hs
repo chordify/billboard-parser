@@ -79,10 +79,10 @@ oddBeatLengthTest (bbd, bbid) =
 rangeTest :: BillboardData -> IO Test
 rangeTest d = do let (avgL, minL, maxL) = getMinMaxBeatLen . getSong $ d
                  putStrLn ("average beat length: " ++ show avgL)
-                 return . applyTestToList (test minL maxL) . getSong $ d where
+                 return . applyTestToList (testf minL maxL) . getSong $ d where
 
-    test :: Double -> Double -> TimedData BBChord -> Test
-    test minLen maxLen t = 
+    testf :: Double -> Double -> TimedData BBChord -> Test
+    testf minLen maxLen t = 
       TestCase (assertBool  ("Odd Beat length detected for:\n" ++ showChord t) 
                             (rangeCheck minLen maxLen t))
 

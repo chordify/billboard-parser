@@ -42,8 +42,10 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                -- ** Chord reduction
                                , reduceBBChords
                                , expandBBChords
+                               , reduceTimedBBChords
                                -- * Showing
                                , showInMIREXFormat
+                               , showInMIREXFormatReduced
                                ) where
 
 -- HarmTrace stuff
@@ -168,6 +170,10 @@ addLabel lab (c:cs)  = addStart lab c : foldr step [] cs where
   step x xs = x : xs
 
 -- | Sets the indexes of a list of BBChords (starting at 0)
+setChordIxsT :: [TimedData BBChord] -> [TimedData BBChord]
+setChordIxsT cs = zipWith (fmap . flip setChordIx) [0..] cs   
+  
+-- | Sets the indexes of a list of BBChords (starting at 0)
 setChordIxs :: [BBChord] -> [BBChord]
 setChordIxs cs = zipWith setChordIx cs [0..]
   
@@ -220,19 +226,21 @@ getStructAnn = filter ( isStruct . getLabel ) . annotations
 --------------------------------------------------------------------------------
 
 -- | Given a list of 'BBChord's that have a certain duration (i.e. the number of 
--- beats that the chord should sound), every 'BBChord' is replaced by x 
--- 'BBChord'swith the same properties, but whit a duration of 1 beat, where x is
--- the duration of the original 'BBChord'
+-- beats that the chord should sound), every 'BBChord' is replaced by /x/ 
+-- 'BBChord's with the same properties, but whit a duration of 1 beat, where /x/ 
+-- is the duration of the original 'BBChord'
 expandBBChords :: [BBChord] -> [BBChord]
 expandBBChords = setChordIxs . concatMap replic where
   replic c = let x = setDuration c 1 
              in  x : replicate (pred . duration $ chord c) 
                                x { weight = Beat, annotations = []}
                                
--- TODO: move to Billboard.BillboardData
 -- | The inverse function of 'expandChordDur': given a list of 'BBChords' that 
--- all have a duration of 1 beat, all subsequent x 'BBChords' with the same 
--- label are grouped into one 'BBChord' with durations x.
+-- all have a duration of 1 beat, all subsequent /x/ 'BBChords' with the same 
+-- label are grouped into one 'BBChord' with durations /x/. N.B. 
+--
+-- >>> expandBBChords (reduceBBChords cs) = cs
+-- 
 reduceBBChords :: [BBChord] -> [BBChord]
 reduceBBChords = setChordIxs . foldr group []  where
   
@@ -242,50 +250,64 @@ reduceBBChords = setChordIxs . foldr group []  where
     | c `bbChordEq` h  = setDuration c (succ . duration $ chord h): t
     | otherwise        = c : h : t
 
-  -- keep groupBBChord and expandChordDur "inverseable" we use a more strict
-  -- 'BBChord' equallity  
-  bbChordEq :: BBChord -> BBChord -> Bool
-  bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) = 
-    chordRoot cA      == chordRoot cB && 
-    chordShorthand cA == chordShorthand cB && 
-    chordAdditions cA == chordAdditions cB &&
-    anA          `annEq` anB &&
-    btA         `beatEq` btB
-  
-  annEq :: [Annotation] -> [Annotation] -> Bool
-  annEq [] [] = True
-  annEq _  [] = True
-  annEq a  b  = a == b
-    
-  beatEq :: BeatWeight -> BeatWeight -> Bool  
-  beatEq LineStart Beat = True
-  beatEq Bar       Beat = True
-  beatEq Change    Beat = True
-  beatEq Bar       Bar  = False
-  beatEq a         b   = a == b
 
+-- N.B. set chord ix
+reduceTimedBBChords :: [TimedData BBChord] -> [TimedData BBChord]
+reduceTimedBBChords = setChordIxsT . foldr groupT [] where
+
+  groupT :: TimedData BBChord -> [TimedData BBChord] -> [TimedData BBChord]
+  groupT c [] = [c]
+  groupT tc@(TimedData c on _ ) (th@(TimedData h _ off) : t)
+    | c `bbChordEq` h = TimedData (setDuration c (succ . duration $ chord h)) 
+                                  on off : t
+    | otherwise       = tc : th : t
+
+-- keep groupBBChord and expandChordDur "inverseable" we use a more strict
+-- 'BBChord' equallity  
+bbChordEq :: BBChord -> BBChord -> Bool
+bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) = 
+  chordRoot cA      == chordRoot cB && 
+  chordShorthand cA == chordShorthand cB && 
+  chordAdditions cA == chordAdditions cB &&
+  anA          `annEq` anB &&
+  btA         `beatEq` btB where
+  
+    annEq :: [Annotation] -> [Annotation] -> Bool
+    annEq [] [] = True
+    annEq _  [] = True
+    annEq a  b  = a == b
+      
+    beatEq :: BeatWeight -> BeatWeight -> Bool  
+    beatEq LineStart Beat = True
+    beatEq Bar       Beat = True
+    beatEq Change    Beat = True
+    beatEq Bar       Bar  = False
+    beatEq a         b   = a == b
 
 --------------------------------------------------------------------------------
 -- Printing chord sequences
 --------------------------------------------------------------------------------
-     
+
+showInMIREXFormatReduced :: BillboardData -> String
+showInMIREXFormatReduced = concatMap showMIREX . reduceTimedBBChords . getSong 
+
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions
 showInMIREXFormat :: BillboardData -> String
-showInMIREXFormat = concatMap showMIREX . getSong where
+showInMIREXFormat = concatMap showMIREX . getSong 
 
-  showMIREX :: TimedData BBChord ->  String
-  showMIREX c = show (onset c) ++ '\t' : show (offset c) 
-                               ++ '\t' : (mirexBBChord . getData $ c) ++ "\n"
+showMIREX :: TimedData BBChord ->  String
+showMIREX c = show (onset c) ++ '\t' : show (offset c) 
+              ++ '\t' : (mirexBBChord . getData $ c) ++ "\n" where
                                
   -- Categorises a chord as Major or Minor and shows it in Harte et al. syntax
   mirexBBChord :: BBChord -> String
-  mirexBBChord bbc = let c = chord bbc 
-                     in case (chordRoot c, chordShorthand c) of
+  mirexBBChord bbc = let x = chord bbc 
+                     in case (chordRoot x, chordShorthand x) of
                           ((Note _ N), None ) -> "N"
                           ((Note _ X), _    ) -> "X"
                           (r         , Sus2 ) -> show r ++ ":sus2"
                           (r         , Sus4 ) -> show r ++ ":sus4"
-                          (r         , _    ) -> case toTriad c of
+                          (r         , _    ) -> case toTriad x of
                                                    NoTriad ->  "X"
                                                    t   -> show r ++':' : show t

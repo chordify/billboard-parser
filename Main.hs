@@ -20,7 +20,7 @@ module Main (main) where
 
 import Billboard.BillboardData ( BBChord (..), getBBChords, reduceBBChords
                                , BillboardData(..), getTitle, showInMIREXFormat
-                               )
+                               , showInMIREXFormatReduced)
 import Billboard.BillboardParser ( parseBillboard )
 import Billboard.Tests ( mainTestFile, mainTestDir, rangeTest
                        , oddBeatLengthTest) -- , reduceTest, reduceTestVerb)
@@ -163,7 +163,11 @@ parseDir d = void . bbdir oneSliceSalami $ d where
 -- Reads a file and prints the chords in mirex format
 mirexFile :: FilePath -> IO ()
 mirexFile f = readFile f >>= putStrLn . showInMIREXFormat . fst . parseBillboard
-
+              -- do d <- readFile f >>= return . fst . parseBillboard
+                 -- putStrLn $ showInMIREXFormat d
+                 -- putStrLn "***************************************"
+                 -- putStrLn $ showInMIREXFormatReduced d
+                 
 -- Reads a directory an writes a file with the chords in mirex format in the 
 -- folder containing also the original file
 mirexDir :: Maybe FilePath -> FilePath -> IO [String]
