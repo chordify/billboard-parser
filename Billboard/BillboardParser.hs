@@ -359,9 +359,11 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
   replicateNone :: Double -> TimedData [BBChord] -> [BBChord]
   replicateNone prvBeat (TimedData dat on off) = 
     -- calculate the number of beats expected, minus the chords in the list
-    let nrN  = (round ((off - on) / prvBeat)) - (length dat) 
+    let nrN     = (round ((off - on) / prvBeat)) - (length dat) 
+        repNone = noneBBChord {weight = Beat}
     -- annotate that this is an interpolated N list
-    in addLabel (Anno InterpolationInsert) (replicate nrN noneBBChord)
+    in addLabel (Anno InterpolationInsert) 
+                (noneBBChord : replicate (pred nrN) repNone)
   
   -- Calculates the average length of a beat in a list of Timed BBChords
   avgBeatLens :: [TimedData [BBChord]] -> Double
