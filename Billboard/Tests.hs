@@ -16,7 +16,8 @@
 module Billboard.Tests ( mainTestFile
                        , mainTestDir
                        , oddBeatLengthTest 
-                       , reduceTest ) where
+                       , reduceTest 
+                       , rangeTest) where
 
 import Test.HUnit
 import Control.Monad (void)
@@ -41,12 +42,11 @@ testBeatDeviationMultiplier = 0.075
 --------------------------------------------------------------------------------
 
 -- | Testing one File
-mainTestFile :: FilePath -> IO ()
-mainTestFile fp = 
-  do song <- readFile fp >>= return . getSong . fst . parseBillboard
-     let (avgLen, minLen, maxLen) = getMinMaxBeatLen song
-     putStrLn ("average beat length: " ++ show avgLen)
-     void . runTestTT . applyTestToList (rangeTest minLen maxLen) $ song
+mainTestFile :: (BillboardData -> IO Test) -> FilePath -> IO ()
+mainTestFile testf fp = 
+  do readFile fp >>= return . fst . parseBillboard 
+                 >>= testf 
+                 >>= void . runTestTT 
 
 -- | testing a directory of files
 mainTestDir :: ((BillboardData, Int) -> Test )-> FilePath -> IO ()
@@ -69,13 +69,20 @@ oddBeatLengthTest (bbd, bbid) =
                           ++ show bbid ++ ": " ++ getTitle bbd)
               (and . map (rangeCheck minLen maxLen) $ song))
 
+              
+              
 -- | Creates a test out of 'rangeCheck': this test reports on every chord 
 -- whether or not the beat length is within the the allowed range of 
 -- beat length deviation, as set by 'testBeatDeviationMultiplier'.
-rangeTest :: Double -> Double -> TimedData BBChord -> Test
-rangeTest minLen maxLen t = 
-  TestCase (assertBool  ("Odd Beat length detected for:\n" ++ showChord t) 
-                        (rangeCheck minLen maxLen t))
+rangeTest :: BillboardData -> IO Test
+rangeTest d = do let (avgL, minL, maxL) = getMinMaxBeatLen . getSong $ d
+                 putStrLn ("average beat length: " ++ show avgL)
+                 return . applyTestToList (test minL maxL) . getSong $ d where
+
+    test :: Double -> Double -> TimedData BBChord -> Test
+    test minLen maxLen t = 
+      TestCase (assertBool  ("Odd Beat length detected for:\n" ++ showChord t) 
+                            (rangeCheck minLen maxLen t))
 
 showChord :: TimedData BBChord -> String
 showChord t =  (show . chord . getData $ t) ++ ", length: " 
@@ -100,7 +107,7 @@ getMinMaxBeatLen song =
      , avgLen *  testBeatDeviationMultiplier       -- minimum beat length
      , avgLen * (testBeatDeviationMultiplier + 1)) -- maximum beat length
 
--- | Tests the whether: ('expandBBChords' . 'reduceBBChords' $ cs) == cs
+-- | Tests whether: ('expandBBChords' . 'reduceBBChords' $ cs) == cs
 reduceTest :: (BillboardData, Int) -> Test
 reduceTest (bbd, i) = let cs = getBBChords bbd
                  in TestCase (assertBool ("reduce mismatch for id " ++ show i)
