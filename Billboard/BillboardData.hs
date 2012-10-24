@@ -86,16 +86,11 @@ data BBChord = BBChord { annotations :: [Annotation]
 instance Show BBChord where 
   show (BBChord [] Beat  _c) = show Beat
   show (BBChord bd Beat  _c) = show Beat ++ show bd
-  show (BBChord [] w      c) = show w ++ ' ' : show c
+  show (BBChord [] w      c) = show w ++ ' ' : show c -- ++ (show $ duration c)
   show (BBChord bd w      c) = 
     let (srt, end) = partition isStart bd
     in  show w ++ concatMap show srt ++ ' ' : show c ++ ' ' : concatMap show end
 
--- for debugging
--- instance Show BBChord where
-  -- show (BBChord NoBoundary  w _bt c) = show w ++ show c
-  -- show (BBChord (Boundary a)w _bt c) = show w ++ show c ++ show a
-  
 instance Ord BBChord where
   compare (BBChord _ _ a) (BBChord _ _ b)
     | rt == EQ = compare (toTriad a) (toTriad b) -- N.B.toTriad can be expensive
@@ -263,15 +258,12 @@ reduceBBChords = setChordIxs . foldr group []  where
   annEq a  b  = a == b
     
   beatEq :: BeatWeight -> BeatWeight -> Bool  
-  -- beatEq Beat Bar  = True
   beatEq LineStart Beat = True
   beatEq Bar       Beat = True
   beatEq Change    Beat = True
   beatEq Bar       Bar  = False
   beatEq a         b   = a == b
-  
-  -- bbToRChord :: BBChord -> RChord
-  -- bbToRChord (BBChord _ _ c) = RChord [] Change c
+
 
 --------------------------------------------------------------------------------
 -- Printing chord sequences

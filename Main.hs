@@ -20,10 +20,10 @@ module Main (main) where
 
 import Billboard.BillboardData ( BBChord (..), getBBChords, reduceBBChords
                                , BillboardData(..), getTitle, showInMIREXFormat
-                               , expandBBChords)
+                               )
 import Billboard.BillboardParser ( parseBillboard )
 import Billboard.Tests ( mainTestFile, mainTestDir, rangeTest
-                       , oddBeatLengthTest, reduceTest, reduceTestVerb)
+                       , oddBeatLengthTest) -- , reduceTest, reduceTestVerb)
 import Billboard.IOUtils 
 
 -- harmtrace imports
@@ -117,10 +117,10 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
             (Mirex, Right d) -> void (mirexDir mout d)
             (Parse, Left  f) -> parseFile f
             (Parse, Right d) -> parseDir d
-            (Test , Left  f) -> -- mainTestFile rangeTest f
-                                mainTestFile reduceTestVerb f
-            (Test , Right d) -> -- mainTestDir oddBeatLengthTest d
-                                mainTestDir reduceTest d
+            (Test , Left  f) -> mainTestFile rangeTest f
+                                -- mainTestFile reduceTestVerb f
+            (Test , Right d) -> mainTestDir oddBeatLengthTest d
+                                -- mainTestDir reduceTest d
             
 
 --------------------------------------------------------------------------------
@@ -135,15 +135,11 @@ parseFile fp = do inp <- readFile fp
 
 
 printBillboard :: BillboardData -> IO()
-printBillboard bbd = 
-  do putStrLn (getArtist bbd ++ ": " ++ getTitle bbd)
-     putStr $ concatMap (\x -> ' ' : show x) (getBBChords bbd)
+printBillboard bd = 
+  do putStrLn (getArtist bd ++ ": " ++ getTitle bd)
+     putStr . concatMap (\x -> ' ' : show x) . reduceBBChords . getBBChords $ bd
      putStr " |\n\n" 
-     let cs = reduceBBChords $ getBBChords bbd
-     putStr $ concatMap (\x -> ' ' : show x) cs
-     if getBBChords bbd == expandBBChords cs then putStrLn "\nMatch!"
-           else do putStrLn "\n*** NO MATCH ***"
-                   putStr $ concatMap (\x -> ' ' : show x) (expandBBChords cs)
+
 -- parses a directory of Billboard songs
 parseDir :: FilePath -> IO ()
 parseDir d = void . bbdir oneSliceSalami $ d where
