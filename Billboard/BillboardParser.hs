@@ -58,7 +58,9 @@ parseBillboard = parseDataWithErrors pBillboard
 pBillboard :: Parser BillboardData
 pBillboard = do (a, t, ts, r) <- pHeader
                 c             <- pChordLinesPost ts
-                return (BillboardData a t ts r c) where
+                -- before we return the chords we store the index of the 
+                -- chord in the 'BBChord' type (setChordIxsT)
+                return (BillboardData a t ts r (setChordIxsT c)) where
 
              
 --------------------------------------------------------------------------------

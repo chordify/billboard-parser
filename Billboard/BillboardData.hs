@@ -33,6 +33,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , addStartEnd
                                , getDuration
                                , getStructAnn
+                               , setChordIxsT
                                -- ** Tests
                                , isStructSegStart
                                , isNoneBBChord
@@ -169,11 +170,11 @@ addLabel lab (c:cs)  = addStart lab c : foldr step [] cs where
   step x [] = [addEnd lab x] -- add a label to the last element of the list
   step x xs = x : xs
 
--- | Sets the indexes of a list of BBChords (starting at 0)
+-- | Sets the indexes of a list of 'TimedData' 'BBChord's (starting at 0)
 setChordIxsT :: [TimedData BBChord] -> [TimedData BBChord]
 setChordIxsT cs = zipWith (fmap . flip setChordIx) [0..] cs   
   
--- | Sets the indexes of a list of BBChords (starting at 0)
+-- | Sets the indexes of a list of 'BBChords' (starting at 0)
 setChordIxs :: [BBChord] -> [BBChord]
 setChordIxs cs = zipWith setChordIx cs [0..]
   
