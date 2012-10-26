@@ -242,6 +242,15 @@ expandBBChords = setChordIxs . concatMap replic where
 --
 -- >>> expandBBChords (reduceBBChords cs) = cs
 -- 
+-- also,
+--
+-- >>> (expandBBChords cs) = cs
+--
+-- and,
+--
+-- >>> reduceBBChords (reduceBBChords cs) = (reduceBBChords cs)
+--
+-- hold. This has been tested on the first tranch of 649 Billboard songs
 reduceBBChords :: [BBChord] -> [BBChord]
 reduceBBChords = setChordIxs . foldr group []  where
   
@@ -279,11 +288,13 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
     annEq a  b  = a == b
       
     beatEq :: BeatWeight -> BeatWeight -> Bool  
-    beatEq LineStart Beat = True
-    beatEq Bar       Beat = True
-    beatEq Change    Beat = True
-    beatEq Bar       Bar  = False
-    beatEq a         b   = a == b
+    beatEq LineStart Beat       = True
+    beatEq Bar       Beat       = True
+    beatEq Change    Beat       = True
+    beatEq Bar       Bar        = False
+    beatEq Change    Change     = False
+    beatEq LineStart LineStart  = False
+    beatEq a         b          = a == b
 
 --------------------------------------------------------------------------------
 -- Printing chord sequences
