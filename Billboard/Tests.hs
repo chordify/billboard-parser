@@ -24,7 +24,7 @@ import Test.HUnit
 import Control.Monad (void)
 import Data.List (genericLength)
 
-import HarmTrace.Base.MusicTime (TimedData, onset, offset, getData, Timed)
+import HarmTrace.Base.MusicTime (TimedData, onset, offset, getData)
 import HarmTrace.Base.MusicRep (Chord (..))
 
 import Billboard.BillboardParser ( parseBillboard)
@@ -141,7 +141,7 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
 --------------------------------------------------------------------------------
 
 -- | Calculates the duration of a beat
-beatDuration :: Timed t => t a -> Double
+beatDuration :: TimedData a -> Double
 beatDuration t = offset t - onset t
 
 -- | Applies a test to a list of testable items

@@ -27,7 +27,7 @@ import Text.ParserCombinators.UU
 
 import HarmTrace.Base.Parsing hiding (pLineEnd)
 import HarmTrace.Base.MusicRep hiding (isNone)
-import HarmTrace.Base.MusicTime(TimedData (..), Timed (..))
+import HarmTrace.Base.MusicTime(TimedData (..), BeatBar (..), onset, offset)
 import HarmTrace.Base.ChordTokenizer (pRoot, pChord)
 
 import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..), tatumsPerBar
@@ -285,7 +285,8 @@ pChordLinesPost ts = (interp . setTiming) <$> pChordLines ts
 setTiming :: [(Double, a)] -> [TimedData a]
 setTiming [ ] = []
 setTiming [_] = [] -- remove the end 
-setTiming (a : b : cs) = TimedData (snd a) (fst a) (fst b) : setTiming (b:cs)
+setTiming (a : b : cs) = TimedData (snd a) [Time (fst a), Time (fst b)] 
+                         : setTiming (b:cs)
 
 -- interpolates the on- and offset for every 'BBChord' in a timestamped list  
 -- of 'BBChord's 
@@ -295,9 +296,13 @@ interp = concatMap interpolate . fixBothBeatDev where
   -- splits a 'TimedData [BBChord]' into multiple instances interpolating
   -- the off an onsets by evenly dividing the time for every beat.
   interpolate :: TimedData [BBChord] -> [TimedData BBChord]
-  interpolate (TimedData dat on off) = 
-    let bt  = (off - on) / genericLength dat
-    in  zipWith3 TimedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
+  interpolate td = 
+    let on  = onset td
+        off = offset td
+        dat = getData td
+        bt  = (off - on) / genericLength dat
+        timedData d x y = TimedData d [Time x, Time y]
+    in  zipWith3 timedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
 
 -- The beat deviation occurs both at the beginning and at the end of piece,
 -- but the principle of correction is exactly the same (but mirrored). Hence
@@ -359,13 +364,13 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
   
   -- fills the "gap" with none chords
   replicateNone :: Double -> TimedData [BBChord] -> [BBChord]
-  replicateNone prvBeat (TimedData dat on off) = 
+  replicateNone prvBeat d = 
     -- calculate the number of beats expected, minus the chords in the list
-    let nrN     = (round ((off - on) / prvBeat)) - (length dat) 
-        repNone = noneBBChord {weight = Beat}
+    let nrN  = (round ((offset d - onset d) / prvBeat)) - (length . getData $ d) 
+        repN = noneBBChord {weight = Beat}
     -- annotate that this is an interpolated N list
     in addLabel (Anno InterpolationInsert) 
-                (noneBBChord : replicate (pred nrN) repNone)
+                (noneBBChord : replicate (pred nrN) repN)
   
   -- Calculates the average length of a beat in a list of Timed BBChords
   avgBeatLens :: [TimedData [BBChord]] -> Double
@@ -373,7 +378,7 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
   
   -- Calculates the average length of a beat
   avgBeatLen :: TimedData [BBChord] -> Double
-  avgBeatLen (TimedData dat on off) = (off - on) / genericLength dat   
+  avgBeatLen td = (offset td - onset td) / genericLength (getData td)   
     
 --------------------------------------------------------------------------------
 -- Chord sequence data parsers

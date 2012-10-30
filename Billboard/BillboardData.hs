@@ -51,7 +51,8 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
 
 -- HarmTrace stuff
 import HarmTrace.Base.MusicRep  hiding (isNone)
-import HarmTrace.Base.MusicTime (TimedData (..), getData, onset, offset)
+import HarmTrace.Base.MusicTime (TimedData (..), getData, onset, offset
+                                , concatTimedData)
 
 import Billboard.BeatBar
 import Billboard.Annotation ( Annotation (..), isStart, isStruct
@@ -261,16 +262,15 @@ reduceBBChords = setChordIxs . foldr group []  where
     | otherwise        = c : h : t
 
 
--- N.B. set chord ix
+-- | Returns the reduced chord sequences, where repeated chords are merged
+-- into one 'BBChord', similar to 'reduceBBChords', but then wrapped in a 
+-- 'TimedData' type.
 reduceTimedBBChords :: [TimedData BBChord] -> [TimedData BBChord]
 reduceTimedBBChords = setChordIxsT . foldr groupT [] where
 
   groupT :: TimedData BBChord -> [TimedData BBChord] -> [TimedData BBChord]
   groupT c [] = [c]
-  groupT tc@(TimedData c on _ ) (th@(TimedData h _ off) : t)
-    | c `bbChordEq` h = TimedData (setDuration c (succ . duration $ chord h)) 
-                                  on off : t
-    | otherwise       = tc : th : t
+  groupT tc (th : t) = concatTimedData bbChordEq tc th  ++  t
 
 -- keep groupBBChord and expandChordDur "inverseable" we use a more strict
 -- 'BBChord' equallity  
