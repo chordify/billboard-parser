@@ -27,7 +27,8 @@ import Text.ParserCombinators.UU
 
 import HarmTrace.Base.Parsing hiding (pLineEnd)
 import HarmTrace.Base.MusicRep hiding (isNone)
-import HarmTrace.Base.MusicTime(TimedData (..), BeatBar (..), onset, offset)
+import HarmTrace.Base.MusicTime( TimedData (..), timedData
+                               , BeatBar (..), onset, offset)
 import HarmTrace.Base.ChordTokenizer (pRoot, pChord)
 
 import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..), tatumsPerBar
@@ -301,7 +302,6 @@ interp = concatMap interpolate . fixBothBeatDev where
         off = offset td
         dat = getData td
         bt  = (off - on) / genericLength dat
-        timedData d x y = TimedData d [Time x, Time y]
     in  zipWith3 timedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
 
 -- The beat deviation occurs both at the beginning and at the end of piece,

@@ -44,6 +44,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , reduceBBChords
                                , expandBBChords
                                , reduceTimedBBChords
+                               , expandTimedBBChords
                                -- * Showing
                                , showInMIREXFormat
                                , showInMIREXFormatReduced
@@ -51,8 +52,8 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
 
 -- HarmTrace stuff
 import HarmTrace.Base.MusicRep  hiding (isNone)
-import HarmTrace.Base.MusicTime (TimedData (..), getData, onset, offset
-                                , concatTimedData)
+import HarmTrace.Base.MusicTime (TimedData (..), timedDataBT, getData
+                                , onset, offset, concatTimedData)
 
 import Billboard.BeatBar
 import Billboard.Annotation ( Annotation (..), isStart, isStruct
@@ -268,10 +269,24 @@ reduceBBChords = setChordIxs . foldr group []  where
 reduceTimedBBChords :: [TimedData BBChord] -> [TimedData BBChord]
 reduceTimedBBChords = setChordIxsT . foldr groupT [] where
 
-  groupT :: TimedData BBChord -> [TimedData BBChord] -> [TimedData BBChord]
-  groupT c [] = [c]
-  groupT tc (th : t) = concatTimedData bbChordEq tc th  ++  t
+   groupT :: TimedData BBChord -> [TimedData BBChord] -> [TimedData BBChord]
+   groupT c [] = [c]
+   groupT tc@(TimedData c _ ) (th@(TimedData h _ ) : t)
+     | c `bbChordEq` h = concatTimedData 
+                           (setDuration c (succ . duration $ chord h)) tc th : t
+     | otherwise       = tc : th : t
 
+-- | Similar to 'expandBBChords' the inverse of 'reduceTimedBBChords'
+expandTimedBBChords :: [TimedData BBChord] -> [TimedData BBChord]
+expandTimedBBChords = setChordIxsT . concatMap replic where
+
+  replic :: TimedData BBChord -> [TimedData BBChord]
+  replic (TimedData c ts) = 
+    let x  = setDuration c 1 
+    in  zipWith3 timedDataBT
+                 (x : repeat x { weight = Beat, annotations = []}) ts (tail ts)
+
+             
 -- keep groupBBChord and expandChordDur "inverseable" we use a more strict
 -- 'BBChord' equallity  
 bbChordEq :: BBChord -> BBChord -> Bool
