@@ -22,6 +22,7 @@ module Billboard.Tests ( mainTestFile
 
 import Test.HUnit
 import Control.Monad (void)
+
 import Data.List (genericLength)
 
 import HarmTrace.Base.MusicTime (TimedData, onset, offset, getData)
@@ -29,7 +30,8 @@ import HarmTrace.Base.MusicRep (Chord (..))
 
 import Billboard.BillboardParser ( parseBillboard)
 import Billboard.BillboardData ( BillboardData (..), BBChord (..), isNoneBBChord
-                               , reduceBBChords, expandBBChords, getBBChords )
+                               , reduceTimedBBChords, expandTimedBBChords
+                               , getBBChords )
 import Billboard.IOUtils
 
 --------------------------------------------------------------------------------
@@ -112,21 +114,23 @@ getMinMaxBeatLen song =
 -- | Tests whether: ('expandBBChords' . 'reduceBBChords' $ cs) == cs
 reduceTest :: (BillboardData, Int) -> Test
 reduceTest (bbd, i) = 
-  let cs = getBBChords bbd
+  let cs = getSong bbd
   in TestCase 
        (assertBool ("reduce mismatch for id " ++ show i)
-       (and $ zipWith bbChordEq (expandBBChords . reduceBBChords $ cs) cs))
+       (and $ zipWith (\a b -> getData a `bbChordEq` getData b) 
+                      (expandTimedBBChords . reduceTimedBBChords $ cs) cs))
 
 -- | Tests whether: ('expandBBChords' . 'reduceBBChords' $ cs) == cs
 reduceTestVerb :: BillboardData -> IO Test
-reduceTestVerb bbd = do let cs = getBBChords bbd
-                        return . applyTestToList cTest $ 
-                          zip (expandBBChords . reduceBBChords $ cs) cs where 
+reduceTestVerb bbd = 
+  do let cs = getSong bbd
+     return . applyTestToList cTest $ 
+              zip (expandTimedBBChords . reduceTimedBBChords $ cs) cs where 
                           
-  cTest :: (BBChord, BBChord) -> Test 
+  cTest :: (TimedData BBChord, TimedData BBChord) -> Test 
   cTest (a,b) = TestCase 
     (assertBool ("non-maching chords: " ++ show a ++ " and " ++ show b)
-    (a `bbChordEq` b))
+    (getData a `bbChordEq` getData b))
 
 -- compares to 'BBChord's, thoroughly 
 bbChordEq :: BBChord -> BBChord -> Bool
