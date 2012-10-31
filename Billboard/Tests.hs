@@ -31,7 +31,7 @@ import HarmTrace.Base.MusicRep (Chord (..))
 import Billboard.BillboardParser ( parseBillboard)
 import Billboard.BillboardData ( BillboardData (..), BBChord (..), isNoneBBChord
                                , reduceTimedBBChords, expandTimedBBChords
-                               , getBBChords )
+                               ) -- , getBBChords )
 import Billboard.IOUtils
 
 --------------------------------------------------------------------------------
