@@ -23,7 +23,7 @@ import Billboard.BillboardData ( BBChord (..), getBBChords, reduceBBChords
                                , showInMIREXFormatReduced)
 import Billboard.BillboardParser ( parseBillboard )
 import Billboard.Tests ( mainTestFile, mainTestDir, rangeTest
-                       , oddBeatLengthTest, reduceTest, reduceTestVerb)
+                       , oddBeatLengthTest) -- , reduceTest, reduceTestVerb)
 import Billboard.IOUtils 
 
 -- harmtrace imports
@@ -117,10 +117,10 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
             (Mirex, Right d) -> void (mirexDir mout d)
             (Parse, Left  f) -> parseFile f
             (Parse, Right d) -> parseDir d
-            (Test , Left  f) -> -- mainTestFile rangeTest f
-                                mainTestFile reduceTestVerb f
-            (Test , Right d) -> -- mainTestDir oddBeatLengthTest d
-                                mainTestDir reduceTest d
+            (Test , Left  f) -> mainTestFile rangeTest f
+                                -- mainTestFile reduceTestVerb f
+            (Test , Right d) -> mainTestDir oddBeatLengthTest d
+                                -- mainTestDir reduceTest d
             
 
 --------------------------------------------------------------------------------
