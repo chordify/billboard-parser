@@ -1,4 +1,5 @@
 ﻿{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE RankNTypes         #-}
 {-# OPTIONS_GHC -Wall           #-}
 --------------------------------------------------------------------------------
 -- |
