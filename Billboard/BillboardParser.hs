@@ -18,7 +18,8 @@
 -- 2011. (<http://ismir2011.ismir.net/papers/OS8-1.pdf>) 
 --------------------------------------------------------------------------------
 
-module Billboard.BillboardParser ( parseBillboard
+module Billboard.BillboardParser ( pBillboard
+                                 , parseBillboard
                                  , acceptableBeatDeviationMultiplier ) where
 
 import Data.List (genericLength, partition)
