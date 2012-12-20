@@ -48,6 +48,8 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                -- * Showing
                                , showInMIREXFormat
                                , showInMIREXFormatReduced
+                               , showFullChord
+                               , showFullChordReduced
                                ) where
 
 -- HarmTrace stuff
@@ -315,26 +317,40 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
 -- Printing chord sequences
 --------------------------------------------------------------------------------
 
+-- | Identical to 'showInMIREXFormat', but with the chord sequence reduced
+-- by 'reduceTimedBBChords'
 showInMIREXFormatReduced :: BillboardData -> String
-showInMIREXFormatReduced = concatMap showMIREX . reduceTimedBBChords . getSong 
+showInMIREXFormatReduced = concatMap (showLine mirexBBChord) 
+                         . reduceTimedBBChords . getSong 
+
+-- | Simply shows the chordsequence, but with the chord sequence reduced
+-- by 'reduceTimedBBChords'
+showFullChordReduced :: BillboardData -> String
+showFullChordReduced = concatMap (showLine (show . chord)) . reduceTimedBBChords . getSong
+
+-- | Shows the chord sequence in the 'BillboardData'
+showFullChord :: BillboardData -> String
+showFullChord = concatMap (showLine (show . chord)) . getSong 
 
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions
 showInMIREXFormat :: BillboardData -> String
-showInMIREXFormat = concatMap showMIREX . getSong 
+showInMIREXFormat = concatMap (showLine mirexBBChord) . getSong 
 
-showMIREX :: TimedData BBChord ->  String
-showMIREX c = show (onset c) ++ '\t' : show (offset c) 
-              ++ '\t' : (mirexBBChord . getData $ c) ++ "\n" where
+-- | Shows a 'TimedData' 'BBChord' in MIREX triadic format, using only :maj, 
+-- :min, :aug, :dim, sus2, sus4, and ignoring all chord additions 
+showLine ::  (BBChord -> String) -> TimedData BBChord ->  String
+showLine shwf c = show (onset c) ++ '\t' :  show (offset c) 
+                                 ++ '\t' : (shwf . getData $ c) ++ "\n" 
                                
-  -- Categorises a chord as Major or Minor and shows it in Harte et al. syntax
-  mirexBBChord :: BBChord -> String
-  mirexBBChord bbc = let x = chord bbc 
-                     in case (chordRoot x, chordShorthand x) of
-                          ((Note _ N), None ) -> "N"
-                          ((Note _ X), _    ) -> "X"
-                          (r         , Sus2 ) -> show r ++ ":sus2"
-                          (r         , Sus4 ) -> show r ++ ":sus4"
-                          (r         , _    ) -> case toTriad x of
-                                                   NoTriad ->  "X"
-                                                   t   -> show r ++':' : show t
+-- Categorises a chord as Major or Minor and shows it in Harte et al. syntax
+mirexBBChord :: BBChord -> String
+mirexBBChord bbc = let x = chord bbc 
+                   in case (chordRoot x, chordShorthand x) of
+                        ((Note _ N), None ) -> "N"
+                        ((Note _ X), _    ) -> "X"
+                        (r         , Sus2 ) -> show r ++ ":sus2"
+                        (r         , Sus4 ) -> show r ++ ":sus4"
+                        (r         , _    ) -> case toTriad x of
+                                                 NoTriad ->  "X"
+                                                 t   -> show r ++':' : show t

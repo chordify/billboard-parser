@@ -20,7 +20,7 @@ module Main (main) where
 
 import Billboard.BillboardData ( BBChord (..), getBBChords, reduceBBChords
                                , BillboardData(..), getTitle, showInMIREXFormat
-                               , showInMIREXFormatReduced)
+                               , showFullChordReduced)
 import Billboard.BillboardParser ( parseBillboard )
 import Billboard.Tests ( mainTestFile, mainTestDir, rangeTest
                        , oddBeatLengthTest) -- , reduceTest, reduceTestVerb)
@@ -53,8 +53,8 @@ myArgs = [
            Arg { argIndex = ModeArg,
                  argAbbr  = Just 'm',
                  argName  = Just "mode",
-                 argData  = argDataRequired "(parse|mirex|test)" ArgtypeString,
-                 argDesc  = "The operation mode (parse|mirex|test)"
+                 argData  = argDataRequired "mode" ArgtypeString,
+                 argDesc  = "The operation mode (parse|mirex|test|reduce)"
                }
         ,  Arg { argIndex = OutDir,
                  argAbbr  = Just 'o',
@@ -84,17 +84,18 @@ myArgs = [
          ]
 
 -- representing the mode of operation
-data Mode = Mirex | Parse | Test deriving (Eq)
+data Mode = Mirex | Parse | Test | Reduce deriving (Eq)
 
 -- Run from CL
 main :: IO ()
 main = do arg <- parseArgsIO ArgsComplete myArgs
           -- check whether we have a usable mode
           let mode   = case (getRequiredArg arg ModeArg) of
-                         "mirex" -> Mirex
-                         "parse" -> Parse
-                         "test" -> Test
-                         m       -> usageError arg ("unrecognised mode: " ++ m)
+                         "reduce" -> Reduce
+                         "mirex"  -> Mirex
+                         "parse"  -> Parse
+                         "test"   -> Test
+                         m        -> usageError arg ("unrecognised mode: " ++ m)
               -- get filepaths           
               inFile = getArg arg InputFilepath
               inDir  = getArg arg InputDirFilepath
@@ -113,11 +114,13 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
           
           -- do the parsing magic
           case (mode, input) of
-            (Mirex, Left  f) -> mirexFile f
-            (Mirex, Right d) -> void (mirexDir mout d)
-            (Parse, Left  f) -> parseFile f
-            (Parse, Right d) -> parseDir d
-            (Test , Left  f) -> mainTestFile rangeTest f
+            (Reduce, Left  f) -> showFile showFullChordReduced f
+            (Reduce, Right d) -> void (writeDir showFullChordReduced mout d)
+            (Mirex,  Left  f) -> showFile showInMIREXFormat f
+            (Mirex,  Right d) -> void (writeDir showInMIREXFormat mout d)
+            (Parse,  Left  f) -> parseFile f
+            (Parse,  Right d) -> parseDir d
+            (Test ,  Left  f) -> mainTestFile rangeTest f
                                 -- mainTestFile reduceTestVerb f
             (Test , Right d) -> mainTestDir oddBeatLengthTest d
                                 -- mainTestDir reduceTest d
@@ -161,24 +164,21 @@ parseDir d = void . bbdir oneSliceSalami $ d where
 --------------------------------------------------------------------------------
 
 -- Reads a file and prints the chords in mirex format
-mirexFile :: FilePath -> IO ()
-mirexFile f = readFile f >>= putStrLn . showInMIREXFormat . fst . parseBillboard
-              -- do d <- readFile f >>= return . fst . parseBillboard
-                 -- putStrLn $ showInMIREXFormat d
-                 -- putStrLn "***************************************"
-                 -- putStrLn $ showInMIREXFormatReduced d
-                 
--- Reads a directory an writes a file with the chords in mirex format in the 
--- folder containing also the original file
-mirexDir :: Maybe FilePath -> FilePath -> IO [String]
-mirexDir mfp d = getBBFiles d >>= mapM toMirex where
+showFile :: (BillboardData -> String) -> FilePath -> IO ()
+showFile shwf f = readFile f >>= putStrLn . shwf . fst . parseBillboard
+
+-- Reads a directory an writes a file with the chords, in a format defined
+-- by a specific show function, in the folder containing also the original file
+writeDir :: (BillboardData -> String) -> Maybe FilePath -> FilePath 
+         -> IO [String]
+writeDir shwf mfp d = getBBFiles d >>= mapM toMirex where
 
   -- read, parses, and writes one mirex chord file
   toMirex :: (FilePath, Int) -> IO (String)
   toMirex (f,i) = -- (filename, id)
     do inp <- readFile f
        let (bbd, err) = parseBillboard inp
-           s          = showInMIREXFormat bbd
+           s          = shwf bbd
            out        = case mfp of 
                           -- place the file next to the input file (but rename)
                           Nothing -> dropFileName f </> outputFileName

@@ -43,3 +43,4 @@ executable billboard-parser
   
   ghc-options:         -Wall
                        -O2 
+                       -auto-all
