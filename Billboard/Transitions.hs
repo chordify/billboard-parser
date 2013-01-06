@@ -15,6 +15,7 @@ import System.Environment (getArgs)
 import Control.Monad (foldM)
 import Data.Monoid (mappend)
 import Data.List (nub, intercalate)
+import Data.Binary (encodeFile)
 
 
 type Transitions = M.Map (ChordLabel, ChordLabel) Double
@@ -82,4 +83,4 @@ main :: IO ()
 main = do (path:_) <- getArgs
           ts <- statsAll path
           -- putStrLn $ printTransitions ts
-          print (M.toAscList ts)
+          encodeFile "transitions.bin" (M.toAscList ts)
