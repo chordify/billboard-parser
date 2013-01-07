@@ -1,8 +1,11 @@
 {-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Main ( main ) where
 
 import qualified Data.Map as M
+import qualified Data.Vector as V ( length, maximumBy, maxIndexBy, replicate, zipWith, (!), foldr, map, last )
+import Data.Vector                ( Vector, generate, fromList, (//))
 
 import HarmTrace.Base.MusicTime (TimedData, getData)
 import HarmTrace.Base.MusicRep
@@ -17,6 +20,7 @@ import Data.Monoid (mappend)
 import Data.List (nub, intercalate)
 import Data.Binary (encodeFile)
 
+import ChordTrack.Audio.Viterbi
 
 type Transitions = M.Map (ChordLabel, ChordLabel) Float
 
@@ -80,8 +84,58 @@ printTransitions ts = "\t" ++
                            | ((c1', _c2'), p) <- M.toAscList ts, c1 == c1' ] ++ "\n"
                       | ((c1, c2), _) <- M.toAscList ts, c1 == c2 ]
   
+
+-- toViterbiStateTrans :: Transitions -> ([State ChordLabel], [Trans ChordLabel])
+-- toViterbiStateTrans t = (M.elems stateMap, map toTrans . M.toList $ t) where
+
+  -- stateMap ::  M.Map ChordLabel (State ChordLabel)
+  -- stateMap = snd . M.mapAccumWithKey acc 0 
+                 -- . M.mapKeysMonotonic fst 
+                 -- . M.filterWithKey toCMaj $ t
+
+  -- acc :: Int -> ChordLabel -> Double -> (Int, State ChordLabel)
+  -- acc i c _ = (succ i, State i c)
+    
+  -- toCMaj :: (ChordLabel, ChordLabel) -> Double -> Bool
+  -- toCMaj (_from, Chord (Note Nothing C) Maj [] 0 1) _ = True
+  -- toCMaj  _                                         _ = False
+
+  -- toTrans :: ((ChordLabel, ChordLabel), Double) -> Trans ChordLabel
+  -- toTrans ((from, to), p) = Trans ( fromJust $ M.lookup from stateMap
+                                  -- , fromJust $ M.lookup to stateMap
+                                  -- , double2Float p)
+
+-- | Given a list of 'State''s and 'Trans'itions, creates a square transition 
+-- matrix that allows for fast lookup of a transistion of any 'State' to
+-- any other 'State'. If there is no transistion between two states a 0 is 
+-- stored in the matrix
+initTransProb :: forall a. [State a] -> [Trans a] -> Matr Prob
+initTransProb sts ts = 
+  let len  = length sts
+      x = V.replicate len (V.replicate len 0)  -- initial matrix with zeros
+      
+      upd :: Vect Prob -> State a -> Vect Prob
+      upd v s = v // collectState s ts
+  
+      -- Collects the transistion that leave a state as a list of state indices 
+      -- with probabilities
+      collectState :: State a -> [Trans a] -> [(Int, Prob)]
+      collectState (State from _) = foldr step [] where
+
+        step :: Trans a -> [(Int, Prob)] -> [(Int, Prob)]
+        step (Trans (State a _, State to _, p)) rest 
+          | from == a = (to, p) : rest -- the state matches the from state
+          | otherwise = rest
+  
+  in V.zipWith upd x (fromList sts)                                  
+  
+splitEvery :: Int -> [a] -> [[a]]
+splitEvery n [] = []  
+splitEvery n l  = let (row, rest) = splitAt n l in row : splitEvery n rest
+  
 main :: IO ()
 main = do (path:_) <- getArgs
           ts <- statsAll path
-          putStrLn $ printTransitions ts
-          encodeFile "transitions.bin" (M.toAscList ts)
+          mapM_ (putStrLn . show) (splitEvery 24 . M.toList $ts)
+          -- putStrLn $ printTransitions ts
+          -- encodeFile "transitions.bin" (M.toAscList ts)
