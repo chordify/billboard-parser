@@ -18,7 +18,7 @@ import Data.List (nub, intercalate)
 import Data.Binary (encodeFile)
 
 
-type Transitions = M.Map (ChordLabel, ChordLabel) Double
+type Transitions = M.Map (ChordLabel, ChordLabel) Float
 
 
 allRoots :: [Root]
@@ -28,7 +28,7 @@ allRoots = nub . map simplifyRoot $
                       , r <- [C,D,E,F,G,A,B] ]
 
 allChords :: [ChordLabel]
-allChords = [ Chord r sh [] 0 1 | sh <- [Maj,Min,None], r <- allRoots ]
+allChords = [ Chord r sh [] 0 1 | sh <- [Maj,Min], r <- allRoots ]
 
 emptyTransitions :: Transitions
 emptyTransitions = M.fromList $
@@ -36,16 +36,17 @@ emptyTransitions = M.fromList $
 
 -- Get the chords, throw away the rest
 stripData :: BillboardData -> [ChordLabel]
-stripData = filter isBad . map (simplify . chord . getData) . getSong where
+stripData = filter isGood . map (simplify . chord . getData) . getSong where
   simplify :: ChordLabel -> ChordLabel
   simplify c = toMajMinChord c { chordRoot = simplifyRoot (chordRoot c)
                                , chordAdditions = []
                                , getLoc = 0, duration = 1 }
   
-  isBad :: ChordLabel -> Bool
-  isBad (Chord (Note _ N) _ _ _ _) = False
-  isBad (Chord (Note _ X) _ _ _ _) = False
-  isBad _                          = True
+  isGood :: ChordLabel -> Bool
+  isGood (Chord (Note _ N) _    _ _ _) = False
+  isGood (Chord (Note _ X) _    _ _ _) = False
+  isGood (Chord _          None _ _ _) = False -- for chords without a triad
+  isGood _                             = True
 
 -- Process all files in the dir
 statsAll :: FilePath -> IO Transitions
@@ -69,18 +70,18 @@ instance (Ord a) => Ord (Chord a) where
 
 -- Pretty-print the transition matrix
 printTransitions :: Transitions -> String
-printTransitions ts = "," ++ 
-                      intercalate "," [ show c1 | ((c1, c2), _) <- M.toAscList ts
+printTransitions ts = "\t" ++ 
+                      intercalate "\t" [ show c1 | ((c1, c2), _) <- M.toAscList ts
                                                 , c1 == c2 ] 
                       ++ "\n" ++ concat
-                      [ show c1 ++ ","
-                        ++ intercalate ","
+                      [ show c1 ++ "\t"
+                        ++ intercalate "\t"
                            [ show p
-                           | ((c1', c2'), p) <- M.toAscList ts, c1 == c1' ] ++ "\n"
+                           | ((c1', _c2'), p) <- M.toAscList ts, c1 == c1' ] ++ "\n"
                       | ((c1, c2), _) <- M.toAscList ts, c1 == c2 ]
   
 main :: IO ()
 main = do (path:_) <- getArgs
           ts <- statsAll path
-          -- putStrLn $ printTransitions ts
+          putStrLn $ printTransitions ts
           encodeFile "transitions.bin" (M.toAscList ts)
