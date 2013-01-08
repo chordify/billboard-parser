@@ -3,8 +3,10 @@
 
 module Main ( main ) where
 
+import Prelude hiding (sum)
+
 import qualified Data.Map as M
-import qualified Data.Vector as V ( mapM_, fromList)
+import qualified Data.Vector as V ( fromList, map)
 import Data.Vector                ( Vector )
 
 import HarmTrace.Base.MusicTime (TimedData, getData)
@@ -23,8 +25,7 @@ import Data.Binary (encodeFile)
 import ChordTrack.Audio.Viterbi
 import ChordTrack.Audio.VectorNumerics
 
-type Transitions = M.Map (ChordLabel, ChordLabel) Float
-
+type Transitions = M.Map (ChordLabel, ChordLabel) Prob
 
 allRoots :: [Root]
 -- To keep things simple, we generate a lot of notes, and then simplify them
@@ -94,7 +95,7 @@ printTransitions ts = "\t" ++
 initViterbiStates :: [ChordLabel] -> [State ChordLabel]
 initViterbiStates = zipWith State [0 .. ]
 
-initViterbiTrans :: Transitions -> Matrix Float
+initViterbiTrans :: Transitions -> Matrix Prob
 initViterbiTrans = V.fromList . map (V.fromList . map snd) 
                               . splitEvery 24 . M.toList where
   -- we know a map is sorted, just split at every 24 elements
@@ -102,6 +103,12 @@ initViterbiTrans = V.fromList . map (V.fromList . map snd)
   splitEvery n [] = []  
   splitEvery n l  = let (row, rest) = splitAt n l in row : splitEvery n rest
 
+countsToProb :: Matrix Prob -> Matrix Prob
+countsToProb = V.map rowProb where
+
+  rowProb :: Vector Prob -> Vector Prob
+  rowProb v = let s = sum v in scale (1 / s) v
+  
 --------------------------------------------------------------------------------
 -- Command line interface
 --------------------------------------------------------------------------------
@@ -110,8 +117,8 @@ main :: IO ()
 main = do (path:_) <- getArgs
           ts <- statsAll path
           -- putStrLn . show . initViterbiStates . sort $ allChords
-          let trns = initViterbiTrans ts
-          V.mapM_ (putStrLn . show) trns
+          let trns = countsToProb . initViterbiTrans $ ts
+          putStrLn . disp $ trns
           encodeFile "transitions.bin" 
              (toLists trns, initViterbiStates allChords)
              
