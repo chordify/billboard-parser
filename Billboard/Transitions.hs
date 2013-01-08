@@ -4,8 +4,8 @@
 module Main ( main ) where
 
 import qualified Data.Map as M
-import qualified Data.Vector as V ( length, maximumBy, maxIndexBy, replicate, zipWith, (!), foldr, map, last, mapM_)
-import Data.Vector                ( Vector, generate, fromList, (//))
+import qualified Data.Vector as V ( mapM_, fromList)
+import Data.Vector                ( Vector )
 
 import HarmTrace.Base.MusicTime (TimedData, getData)
 import HarmTrace.Base.MusicRep
@@ -17,7 +17,7 @@ import Billboard.IOUtils
 import System.Environment (getArgs)
 import Control.Monad (foldM)
 import Data.Monoid (mappend)
-import Data.List (nub, intercalate, sort)
+import Data.List (nub ) -- , intercalate)
 import Data.Binary (encodeFile)
 
 import ChordTrack.Audio.Viterbi
@@ -72,9 +72,9 @@ statsAll fp = do files <- getBBFiles fp
 instance (Ord a) => Ord (Chord a) where
   compare a b = compare (chordShorthand a) (chordShorthand b) `mappend` 
                 compare (chordRoot a) (chordRoot b)
-                
 
 -- Pretty-print the transition matrix
+{-
 printTransitions :: Transitions -> String
 printTransitions ts = "\t" ++ 
                       intercalate "\t" [ show c1 | ((c1, c2), _) <- M.toAscList ts
@@ -84,27 +84,34 @@ printTransitions ts = "\t" ++
                         ++ intercalate "\t"
                            [ show p
                            | ((c1', _c2'), p) <- M.toAscList ts, c1 == c1' ] ++ "\n"
-                      | ((c1, c2), _) <- M.toAscList ts, c1 == c2 ] 
+                      | ((c1, c2), _) <- M.toAscList ts, c1 == c2 ]          
+ -}
+ 
+--------------------------------------------------------------------------------
+-- Prepare data for use in ChordTrack.Audio.Viterbi
+--------------------------------------------------------------------------------
 
 initViterbiStates :: [ChordLabel] -> [State ChordLabel]
 initViterbiStates = zipWith State [0 .. ]
 
-initViterbiTrans :: Transitions -> Matr Float
-initViterbiTrans = fromList . map (fromList . map snd) 
-                            . splitEvery 24 . M.toList where
-
-                            
-                            
+initViterbiTrans :: Transitions -> Matrix Float
+initViterbiTrans = V.fromList . map (V.fromList . map snd) 
+                              . splitEvery 24 . M.toList where
+  -- we know a map is sorted, just split at every 24 elements
   splitEvery :: Int -> [a] -> [[a]]
   splitEvery n [] = []  
   splitEvery n l  = let (row, rest) = splitAt n l in row : splitEvery n rest
-  
+
+--------------------------------------------------------------------------------
+-- Command line interface
+--------------------------------------------------------------------------------
+
 main :: IO ()
 main = do (path:_) <- getArgs
           ts <- statsAll path
           -- putStrLn . show . initViterbiStates . sort $ allChords
-          let trans = initViterbiTrans ts
-          V.mapM_ (putStrLn . show) trans
+          let trns = initViterbiTrans ts
+          V.mapM_ (putStrLn . show) trns
           encodeFile "transitions.bin" 
-             (toLists trans, initViterbiStates allChords)
+             (toLists trns, initViterbiStates allChords)
              
