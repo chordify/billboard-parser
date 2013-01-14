@@ -23,7 +23,7 @@ import Billboard.BillboardData ( BBChord (..)
                                , showFullChord, showInMIREXFormat, getTitle)
 import Billboard.BillboardParser ( parseBillboard )
 import Billboard.Tests ( mainTestFile, mainTestDir, rangeTest
-                       , oddBeatLengthTest) -- , reduceTest, reduceTestVerb)
+                       , oddBeatLengthTest, getOffBeats) 
 import Billboard.IOUtils 
 
 -- harmtrace imports
@@ -34,6 +34,7 @@ import System.Console.ParseArgs
 import System.FilePath
 import Control.Monad (when, void)
 import Text.Printf (printf)
+import Data.List (genericLength, intercalate)
 
 --------------------------------------------------------------------------------
 -- Contants
@@ -93,7 +94,7 @@ myArgs = [
          ]
 
 -- representing the mode of operation
-data Mode = Mirex | Parse | Test | Full deriving (Eq)
+data Mode = Mirex | Parse | Test | Full | Result deriving (Eq)
 
 -- Run from CL
 main :: IO ()
@@ -104,6 +105,7 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
                          "mirex"  -> Mirex
                          "parse"  -> Parse
                          "test"   -> Test
+                         "result" -> Result
                          m        -> usageError arg ("unrecognised mode: " ++ m)
               -- get filepaths           
               inFile = getArg arg InputFilepath
@@ -136,9 +138,9 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
             (Parse,  Left  f) -> parseFile compf f
             (Parse,  Right d) -> parseDir d
             (Test ,  Left  f) -> mainTestFile rangeTest f
-                                -- mainTestFile reduceTestVerb f
-            (Test , Right d) -> mainTestDir oddBeatLengthTest d
-                                -- mainTestDir reduceTest d
+            (Test ,  Right d) -> mainTestDir oddBeatLengthTest d
+            (Result,  Left  _) -> error "can only run results on a full dataset"
+            (Result,  Right d) -> runResults d
             
 
 --------------------------------------------------------------------------------
@@ -204,3 +206,18 @@ writeDir shwf mfp d = getBBFiles d >>= mapM toMirex where
        putStrLn ("written file: " ++ out)
        return s
 
+runResults :: FilePath -> IO ()
+runResults d = do let ths = [0.05, 0.075, 0.1, 0.15, 0.25]
+                  putStrLn $ intercalate "\t" ("File" : map show ths)
+                  getBBFiles d >>= mapM_ (getResult ths)
+  where 
+    getResult :: [Double] -> (FilePath, Int) -> IO [Double]
+    getResult ths (fp, _) = do inp <- readFile fp 
+                                   >>= return . getSong . fst . parseBillboard
+                               let r = map (offRatio inp) ths
+                               putStrLn $ intercalate "\t" (fp : map show r)
+                               return r
+                               
+    offRatio :: [TimedData BBChord] -> Double -> Double
+    offRatio td th = genericLength (getOffBeats th td) / genericLength td 
+                           
