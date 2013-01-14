@@ -54,7 +54,7 @@ myArgs = [
                  argAbbr  = Just 'm',
                  argName  = Just "mode",
                  argData  = argDataRequired "mode" ArgtypeString,
-                 argDesc  = "The operation mode (parse|mirex|test|reduce)"
+                 argDesc  = "The operation mode (parse|mirex|test|full)"
                }
         ,  Arg { argIndex = OutDir,
                  argAbbr  = Just 'o',
@@ -93,14 +93,14 @@ myArgs = [
          ]
 
 -- representing the mode of operation
-data Mode = Mirex | Parse | Test | Reduce deriving (Eq)
+data Mode = Mirex | Parse | Test | Full deriving (Eq)
 
 -- Run from CL
 main :: IO ()
 main = do arg <- parseArgsIO ArgsComplete myArgs
           -- check whether we have a usable mode
           let mode   = case (getRequiredArg arg ModeArg) of
-                         "reduce" -> Reduce
+                         "full"   -> Full
                          "mirex"  -> Mirex
                          "parse"  -> Parse
                          "test"   -> Test
@@ -129,8 +129,8 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
           
           -- do the parsing magic
           case (mode, input) of
-            (Reduce, Left  f) -> showFile (showFullChord compf) f
-            (Reduce, Right d) -> void $ writeDir (showFullChord compf) mout d
+            (Full, Left  f) -> showFile (showFullChord compf) f
+            (Full, Right d) -> void $ writeDir (showFullChord compf) mout d
             (Mirex,  Left  f) -> showFile (showInMIREXFormat compf) f
             (Mirex,  Right d) -> void $ writeDir (showInMIREXFormat compf) mout d
             (Parse,  Left  f) -> parseFile compf f
