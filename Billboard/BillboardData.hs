@@ -47,9 +47,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , expandTimedBBChords
                                -- * Showing
                                , showInMIREXFormat
-                               , showInMIREXFormatReduced
                                , showFullChord
-                               , showFullChordReduced
                                ) where
 
 -- HarmTrace stuff
@@ -317,25 +315,16 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
 -- Printing chord sequences
 --------------------------------------------------------------------------------
 
--- | Identical to 'showInMIREXFormat', but with the chord sequence reduced
--- by 'reduceTimedBBChords'
-showInMIREXFormatReduced :: BillboardData -> String
-showInMIREXFormatReduced = concatMap (showLine mirexBBChord) 
-                         . reduceTimedBBChords . getSong 
-
--- | Simply shows the chordsequence, but with the chord sequence reduced
--- by 'reduceTimedBBChords'
-showFullChordReduced :: BillboardData -> String
-showFullChordReduced = concatMap (showLine (show . chord)) . reduceTimedBBChords . getSong
-
 -- | Shows the chord sequence in the 'BillboardData'
-showFullChord :: BillboardData -> String
-showFullChord = concatMap (showLine (show . chord)) . getSong 
+showFullChord :: ([TimedData BBChord] -> [TimedData BBChord]) 
+              -> BillboardData -> String
+showFullChord redf = concatMap (showLine (show . chord)) . redf . getSong 
 
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions
-showInMIREXFormat :: BillboardData -> String
-showInMIREXFormat = concatMap (showLine mirexBBChord) . getSong 
+showInMIREXFormat :: ([TimedData BBChord] -> [TimedData BBChord]) 
+                  -> BillboardData -> String
+showInMIREXFormat redf = concatMap (showLine mirexBBChord) . redf . getSong 
 
 -- | Shows a 'TimedData' 'BBChord' in MIREX triadic format, using only :maj, 
 -- :min, :aug, :dim, sus2, sus4, and ignoring all chord additions 
