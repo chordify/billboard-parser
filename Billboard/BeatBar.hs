@@ -1,10 +1,10 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Billboard.BillboardParser
--- Copyright   :  (c) 2012 Universiteit Utrecht
--- License     :  GPL3
+-- Copyright   :  (c) 2012--2013 Utrecht University
+-- License     :  LGPL-3
 --
--- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Maintainer  :  W. Bas de Haas <bash@cs.uu.nl>
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
@@ -78,6 +78,8 @@ tatumsPerBar (TimeSig (beats , 4)) = 2 * beats
 tatumsPerBar (TimeSig (beats , 8)) = beats
 tatumsPerBar ts = irregularMeterError ts "illegal denominator"
 
+-- | Returns the number of 'BBChord' that are inserted for one ".", based on
+-- a 'TimeSig'nature.
 chordsPerDot :: TimeSig -> Int
 chordsPerDot (TimeSig (_ , 4)) = 2
 chordsPerDot (TimeSig (_ , 8)) = 3

@@ -5,7 +5,7 @@
 -- Copyright   :  (c) 2012 Universiteit Utrecht
 -- License     :  GPL3
 --
--- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Maintainer  :  W. Bas de Haas <bash@cs.uu.nl>
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
@@ -199,7 +199,7 @@ writeDir shwf mfp d = getBBFiles d >>= mapM toMirex where
            out        = case mfp of 
                           -- place the file next to the input file (but rename)
                           Nothing -> dropFileName f </> outputFileName
-                          -- place teh output file in a specific folder (if set)
+                          -- place the output file in a specific folder (if set)
                           Just fp -> fp </>  printf "%.4d" i ++ "_audio.lab"
        when (not $ null err) (error ("there were errors in file: " ++ f))
        writeFile out s
