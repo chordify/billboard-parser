@@ -4,10 +4,10 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Billboard.BillboardParser
--- Copyright   :  (c) 2012 Universiteit Utrecht
--- License     :  GPL3
+-- Copyright   :  (c) 2012--2013 Utrecht University
+-- License     :  LGPL-3
 --
--- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Maintainer  :  W. Bas de Haas <bash@cs.uu.nl>
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
@@ -44,6 +44,8 @@ import Billboard.Annotation (  Annotation (..), Label (..)
 -- Constants
 --------------------------------------------------------------------------------
 
+-- | A parameter that sets the acceptable beat deviation multiplier, which
+-- controls when exceptionally long beat lengths will be interpolated.
 acceptableBeatDeviationMultiplier :: Double
 acceptableBeatDeviationMultiplier = 0.075
 
@@ -479,7 +481,7 @@ pZSilence = endChord <$>
 pSongEnd :: Parser BBChord
 pSongEnd = (flip addEnd) noneBBChord <$> ((Anno SongEnd) <$ pString "end")
 
--- recongnises a chord sequence like: 
+-- recognises a chord sequence like: 
 -- "| Db:maj Gb:maj/5 | Ab:maj Db:maj/5 | Bb:min Bb:min/b7 Gb:maj . | Ab:maj |\"
 pChordSeq :: TimeSig -> Parser [BBChord]
 pChordSeq ts = setWeight . concat <$> (pSym '|' 
@@ -509,7 +511,7 @@ markBarStart (h:t) = h {weight = Bar} : t
   
 -- within a bar there can be one chord, two chords (representing the sounding
 -- chord in the first and second halve of the bar), multiple chords, and 
--- repetitons marked with a '.'
+-- repetitions marked with a '.'
 updateRep :: TimeSig -> [BBChord] -> [BBChord]
 updateRep _  [ ]      = error "updateRep: no chords to update"
 updateRep ts [c]      = replChord (tatumsPerBar ts) c          -- one chord

@@ -2,10 +2,10 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Billboard.BillboardData
--- Copyright   :  (c) 2012 Universiteit Utrecht
--- License     :  GPL3
+-- Copyright   :  (c) 2012--2013 Utrecht University
+-- License     :  LGPL-3
 --
--- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Maintainer  :  W. Bas de Haas <bash@cs.uu.nl>
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
@@ -23,7 +23,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , Artist
                                , Title
                                , noneBBChord
-                               -- * BillBoard data utilities
+                               -- * Billboard data utilities
                                -- ** Data access
                                , getBBChords
                                , getBBChordsNoSilence
@@ -71,7 +71,7 @@ data BillboardData = BillboardData { getTitle   :: Title
                                    , getSong    :: [TimedData BBChord]
                                    } deriving Show
 
--- | Represents the artits of the piece
+-- | Represents the artists of the piece
 type Artist = String 
 -- | Represents the title of the piece
 type Title  = String  
@@ -116,14 +116,14 @@ instance Eq BBChord where
 noneBBChord :: BBChord
 noneBBChord = BBChord [] Change noneLabel {duration =1}
 
--- | Returns True if the 'BBChord' represents a strating point of a stuctural
--- segement
+-- | Returns True if the 'BBChord' represents a starting point of a structural
+-- segment
 isStructSegStart :: BBChord -> Bool-- look for segTypes that are Start and Struct
 isStructSegStart = not . null . filter isStruct . map getLabel 
                               . filter isStart  . annotations 
 
 -- | Returns True if the 'BBChord' represents a chord Change (must be set 
--- beforehand, only the 'BeatWeight' stored in the BBChord is examined)
+-- beforehand, only the 'BeatWeight' stored in the 'BBChord' is examined)
 isChange :: BBChord -> Bool
 isChange c = case weight c of
   Change    -> True
@@ -135,11 +135,11 @@ isChange c = case weight c of
 isNoneBBChord :: BBChord -> Bool
 isNoneBBChord = isNoneChord . chord
 
--- Returns True if this 'BBChord' is the last (N) chord of the song
+-- | Returns True if this 'BBChord' is the last (N) chord of the song
 isEnd :: BBChord -> Bool
 isEnd c = isNoneBBChord c && hasAnnotation isEndAnno c 
 
--- | Returns True if the 'BBChord' has any 'Annotations's and false otherwise
+-- | Returns True if the 'BBChord' has any 'Annotations's and False otherwise
 hasAnnotations :: BBChord -> Bool
 hasAnnotations = not . null . annotations
 
@@ -185,7 +185,7 @@ setChordIx :: BBChord -> Int -> BBChord
 setChordIx rc i = let x = chord rc in rc {chord = x {getLoc = i} }
 
 -- | Returns the duration of the chord (the unit of the duration can be 
--- application dependend, but will generally be measured in eighth notes)
+-- application dependent, but will generally be measured in eighth notes)
 -- If the data comes directly from the parser the duration will be 1 for
 -- all 'BBChord's. However, if it has been \reduced\ with 'reduceBBChords'
 -- the duration will be the number of consecutive tatum units.
@@ -196,11 +196,11 @@ getDuration = duration . chord
 setDuration :: BBChord -> Int -> BBChord
 setDuration c i = let x = chord c in c { chord = x { duration = i } }
   
--- | Strips the time stamps from BillBoardData and concatnates all 'BBChords'
+-- | Strips the time stamps from BillBoardData and concatenates all 'BBChords'
 getBBChords :: BillboardData -> [BBChord]
 getBBChords = map getData . getSong
 
--- | Strips the time stamps from BillBoardData and concatnates all 'BBChords'
+-- | Strips the time stamps from BillBoardData and concatenates all 'BBChords'
 -- and removes the silence at the beginning and end of the song.
 getBBChordsNoSilence :: BillboardData -> [BBChord]
 getBBChordsNoSilence = removeSilence . getBBChords where
