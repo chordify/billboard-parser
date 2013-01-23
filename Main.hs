@@ -5,7 +5,7 @@
 -- Copyright   :  (c) 2012 Universiteit Utrecht
 -- License     :  GPL3
 --
--- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Maintainer  :  W. Bas de Haas <bash@cs.uu.nl>
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
@@ -18,22 +18,23 @@
 
 module Main (main) where
 
-import Billboard.BillboardData ( BBChord (..), getBBChords, reduceBBChords
-                               , BillboardData(..), getTitle, showInMIREXFormat
-                               , showFullChordReduced)
+import Billboard.BillboardData ( BBChord (..)
+                               , reduceTimedBBChords, BillboardData(..)
+                               , showFullChord, showInMIREXFormat, getTitle)
 import Billboard.BillboardParser ( parseBillboard )
 import Billboard.Tests ( mainTestFile, mainTestDir, rangeTest
-                       , oddBeatLengthTest) -- , reduceTest, reduceTestVerb)
+                       , oddBeatLengthTest, getOffBeats) 
 import Billboard.IOUtils 
 
 -- harmtrace imports
-import HarmTrace.Base.MusicTime (TimedData (..))
+import HarmTrace.Base.MusicTime (TimedData (..), dropTimed)
 
 -- other libraries
 import System.Console.ParseArgs
 import System.FilePath
 import Control.Monad (when, void)
 import Text.Printf (printf)
+import Data.List (genericLength, intercalate)
 
 --------------------------------------------------------------------------------
 -- Contants
@@ -46,7 +47,7 @@ outputFileName = "mirex_chords" <.> "txt"
 -- Commandline argument parsing
 --------------------------------------------------------------------------------
 data ReppatArgs = InputFilepath | InputDirFilepath | InputID | ModeArg | OutDir
-                  deriving (Eq, Ord, Show)
+                | Compression deriving (Eq, Ord, Show)
 
 myArgs :: [Arg ReppatArgs]
 myArgs = [
@@ -54,7 +55,7 @@ myArgs = [
                  argAbbr  = Just 'm',
                  argName  = Just "mode",
                  argData  = argDataRequired "mode" ArgtypeString,
-                 argDesc  = "The operation mode (parse|mirex|test|reduce)"
+                 argDesc  = "The operation mode (parse|mirex|test|full)"
                }
         ,  Arg { argIndex = OutDir,
                  argAbbr  = Just 'o',
@@ -78,29 +79,45 @@ myArgs = [
                  argAbbr  = Just 'i',
                  argName  = Just "id",
                  argData  = argDataOptional "integer" ArgtypeInt,
-                 argDesc  = (  "Input identifier (0-1000). Can only be used in "
-                            ++ "combination with a base directory" )
+                 argDesc  = (  "Input identifier (0-1000). Can only be used\n"
+                            ++ "                          in combination with "
+                            ++ "a base directory" )
+               }
+         , Arg { argIndex = Compression,
+                 argAbbr  = Just 'c',
+                 argName  = Just "comp",
+                 argData  = argDataOptional "string" ArgtypeString,
+                 argDesc  = (  "Use \"exp(and)\" to use eighth note grid output"
+                            ++ "\n                          and \"red(uce)\" "
+                            ++ "for compressed output" )
                }
          ]
 
 -- representing the mode of operation
-data Mode = Mirex | Parse | Test | Reduce deriving (Eq)
+data Mode = Mirex | Parse | Test | Full | Result deriving (Eq)
 
 -- Run from CL
 main :: IO ()
 main = do arg <- parseArgsIO ArgsComplete myArgs
           -- check whether we have a usable mode
           let mode   = case (getRequiredArg arg ModeArg) of
-                         "reduce" -> Reduce
+                         "full"   -> Full
                          "mirex"  -> Mirex
                          "parse"  -> Parse
                          "test"   -> Test
+                         "result" -> Result
                          m        -> usageError arg ("unrecognised mode: " ++ m)
               -- get filepaths           
               inFile = getArg arg InputFilepath
               inDir  = getArg arg InputDirFilepath
               bbid   = getArg arg InputID
               mout   = getArg arg OutDir
+              compf  = case getArg arg Compression of
+                        (Just "exp")    -> id
+                        (Just "expand") -> id
+                        (Just "red")    -> reduceTimedBBChords
+                        (Just "reduce") -> reduceTimedBBChords
+                        _               -> reduceTimedBBChords
               
           -- the input is either a file (Left) or a directory (Right)
           input  <-  case (inFile, inDir, bbid) of
@@ -114,34 +131,34 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
           
           -- do the parsing magic
           case (mode, input) of
-            (Reduce, Left  f) -> showFile showFullChordReduced f
-            (Reduce, Right d) -> void (writeDir showFullChordReduced mout d)
-            (Mirex,  Left  f) -> showFile showInMIREXFormat f
-            (Mirex,  Right d) -> void (writeDir showInMIREXFormat mout d)
-            (Parse,  Left  f) -> parseFile f
+            (Full, Left  f) -> showFile (showFullChord compf) f
+            (Full, Right d) -> void $ writeDir (showFullChord compf) mout d
+            (Mirex,  Left  f) -> showFile (showInMIREXFormat compf) f
+            (Mirex,  Right d) -> void $ writeDir (showInMIREXFormat compf) mout d
+            (Parse,  Left  f) -> parseFile compf f
             (Parse,  Right d) -> parseDir d
             (Test ,  Left  f) -> mainTestFile rangeTest f
-                                -- mainTestFile reduceTestVerb f
-            (Test , Right d) -> mainTestDir oddBeatLengthTest d
-                                -- mainTestDir reduceTest d
+            (Test ,  Right d) -> mainTestDir oddBeatLengthTest d
+            (Result,  Left  _) -> error "can only run results on a full dataset"
+            (Result,  Right d) -> runResults d
             
 
 --------------------------------------------------------------------------------
 -- Parsing Billboard data verbosely
 -------------------------------------------------------------------------------- 
 
-parseFile :: FilePath -> IO ()
-parseFile fp = do inp <- readFile fp
-                  let (bbd, err) = parseBillboard inp
-                  printBillboard bbd
-                  mapM_ print err
+parseFile :: ([TimedData BBChord] -> [TimedData BBChord]) -> FilePath -> IO ()
+parseFile cf fp = do inp <- readFile fp
+                     let (bbd, err) = parseBillboard inp
+                     printBillboard bbd
+                     mapM_ print err where
 
 
-printBillboard :: BillboardData -> IO()
-printBillboard bd = 
-  do putStrLn (getArtist bd ++ ": " ++ getTitle bd)
-     putStr . concatMap (\x -> ' ' : show x) . reduceBBChords . getBBChords $ bd
-     putStr " |\n\n" 
+  printBillboard :: BillboardData -> IO()
+  printBillboard bd = 
+    do putStrLn (getArtist bd ++ ": " ++ getTitle bd)
+       putStr . concatMap (\x -> ' ' : show x) . dropTimed . cf . getSong $ bd
+       putStr " |\n\n" 
 
 -- parses a directory of Billboard songs
 parseDir :: FilePath -> IO ()
@@ -182,10 +199,25 @@ writeDir shwf mfp d = getBBFiles d >>= mapM toMirex where
            out        = case mfp of 
                           -- place the file next to the input file (but rename)
                           Nothing -> dropFileName f </> outputFileName
-                          -- place teh output file in a specific folder (if set)
+                          -- place the output file in a specific folder (if set)
                           Just fp -> fp </>  printf "%.4d" i ++ "_audio.lab"
        when (not $ null err) (error ("there were errors in file: " ++ f))
        writeFile out s
        putStrLn ("written file: " ++ out)
        return s
 
+runResults :: FilePath -> IO ()
+runResults d = do let ths = [0.05, 0.075, 0.1, 0.15, 0.25]
+                  putStrLn $ intercalate "\t" ("File" : map show ths)
+                  getBBFiles d >>= mapM_ (getResult ths)
+  where 
+    getResult :: [Double] -> (FilePath, Int) -> IO [Double]
+    getResult ths (fp, _) = do inp <- readFile fp 
+                                   >>= return . getSong . fst . parseBillboard
+                               let r = map (offRatio inp) ths
+                               putStrLn $ intercalate "\t" (fp : map show r)
+                               return r
+                               
+    offRatio :: [TimedData BBChord] -> Double -> Double
+    offRatio td th = genericLength (getOffBeats th td) / genericLength td 
+                           

@@ -2,17 +2,17 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Billboard.IOUtils
--- Copyright   :  (c) 2012 Universiteit Utrecht
--- License     :  GPL3
+-- Copyright   :  (c) 2012--2013 Utrecht University
+-- License     :  LGPL-3
 --
--- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Maintainer  :  W. Bas de Haas <bash@cs.uu.nl>
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
 -- Summary: A set Billboard specific file and directory utilities
 --------------------------------------------------------------------------------
 
-module Billboard.IOUtils (bbdir, getBBFiles, getBBFile)where
+module Billboard.IOUtils (bbdir, getBBFiles, getBBFile) where
 
 import System.Directory
 import System.FilePath

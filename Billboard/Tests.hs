@@ -3,10 +3,10 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Billboard.Tests
--- Copyright   :  (c) 2012 Universiteit Utrecht
--- License     :  GPL3
+-- Copyright   :  (c) 2012--2013 Utrecht University
+-- License     :  LGPL-3
 --
--- Maintainer  :  W. Bas de Haas <W.B.deHaas@uu.nl>
+-- Maintainer  :  W. Bas de Haas <bash@cs.uu.nl>
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
@@ -18,7 +18,8 @@ module Billboard.Tests ( mainTestFile
                        , oddBeatLengthTest 
                        , reduceTest 
                        , reduceTestVerb
-                       , rangeTest) where
+                       , rangeTest
+                       , getOffBeats) where
 
 import Test.HUnit
 import Control.Monad (void)
@@ -104,12 +105,15 @@ rangeCheck minLen maxLen t = let len = beatDuration t
 -- | Given a 'TimedData', returns a triplet containing the average beat length,
 -- the minimum beat length and the maximum beat length, respectively.
 getMinMaxBeatLen :: [TimedData BBChord] -> (Double, Double, Double)
-getMinMaxBeatLen song =
+getMinMaxBeatLen = getMinMaxBeatLen' testBeatDeviationMultiplier
+
+getMinMaxBeatLen' :: Double -> [TimedData BBChord] -> (Double, Double, Double)
+getMinMaxBeatLen' mult song =
   let chds   = filter (not . isNoneBBChord . getData ) song
       avgLen = (sum $ map beatDuration chds) / (genericLength chds)
   in ( avgLen                                            -- average beat length
-     , avgLen *  testBeatDeviationMultiplier       -- minimum beat length
-     , avgLen * (testBeatDeviationMultiplier + 1)) -- maximum beat length
+     , avgLen *  mult       -- minimum beat length
+     , avgLen * (mult + 1)) -- maximum beat length
 
 -- | Tests whether: ('expandBBChords' . 'reduceBBChords' $ cs) == cs
 reduceTest :: (BillboardData, Int) -> Test
@@ -138,8 +142,13 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
   anA == anB && btA == btB && 
   chordRoot cA      == chordRoot cB && 
   chordShorthand cA == chordShorthand cB && 
-  chordAdditions cA == chordAdditions cB 
+  chordAdditions cA == chordAdditions cB   
+  
+getOffBeats :: Double -> [TimedData BBChord] -> [TimedData BBChord]
+getOffBeats th song = let (_avg, mn, mx) = getMinMaxBeatLen' th song
+                      in  filter (not . rangeCheck mn mx) song
 
+  
 --------------------------------------------------------------------------------
 -- Some testing related utitlities
 --------------------------------------------------------------------------------
