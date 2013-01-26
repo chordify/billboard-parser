@@ -34,23 +34,24 @@ allRoots = nub . map simplifyRoot $
                       , r <- [C,D,E,F,G,A,B] ]
 
 allChords :: [ChordLabel]
-allChords = [ shortChord r sh | sh <- [Maj,Min], r <- allRoots ]
+allChords = shortChord (Note Nothing N) None :
+          [ shortChord r sh | sh <- [Maj,Min], r <- allRoots ]
 
 emptyTransitions :: Transitions
-emptyTransitions = addNoChords . M.fromList 
+emptyTransitions = M.fromList 
                  $ [ ((c1,c2),0.0) | c1 <- allChords, c2 <- allChords ] where
 
-  -- adds the transitions to and from N chords
-  addNoChords :: Transitions -> Transitions 
-  -- insert (N,N) with a high count
-  addNoChords ts = M.insertWith (+) ( shortChord (Note Nothing N) None
-                                    , shortChord (Note Nothing N) None) 24  
-                 $ foldr doN ts allChords 
+  -- -- adds the transitions to and from N chords
+  -- addNoChords :: Transitions -> Transitions 
+  -- -- insert (N,N) with a high count
+  -- addNoChords ts = M.insertWith (+) ( shortChord (Note Nothing N) None
+                                    -- , shortChord (Note Nothing N) None) 24  
+                 -- $ foldr doN ts allChords 
   
-  -- add (n, anyChord) and vice versa, with a low but constant count
-  doN :: ChordLabel -> Transitions -> Transitions
-  doN nc t  =  M.insertWith (+) (shortChord (Note Nothing N) None, nc) 1 
-            $  M.insertWith (+) (nc, shortChord (Note Nothing N) None) 1 t
+  -- -- add (n, anyChord) and vice versa, with a low but constant count
+  -- doN :: ChordLabel -> Transitions -> Transitions
+  -- doN nc t  =  M.insertWith (+) (shortChord (Note Nothing N) None, nc) 1 
+            -- $  M.insertWith (+) (nc, shortChord (Note Nothing N) None) 1 t
          
                    
 -- Get the chords, throw away the rest
@@ -62,7 +63,7 @@ stripData = filter isGood . map (simplify . chord . getData) . getSong where
                                , getLoc = 0, duration = 1 }
   
   isGood :: ChordLabel -> Bool
-  isGood (Chord (Note _ N) _    _ _ _) = False
+  isGood (Chord (Note _ N) None _ _ _) = True
   isGood (Chord (Note _ X) _    _ _ _) = False
   isGood (Chord _          None _ _ _) = False -- for chords without a triad
   isGood _                             = True
@@ -116,7 +117,7 @@ printTransitions ts = "\t" ++
 --------------------------------------------------------------------------------
 
 initViterbiStates :: [ChordLabel] -> [State ChordLabel]
-initViterbiStates = zipWith State [0 .. ]
+initViterbiStates = zip [0 .. ]
 
 initViterbiTrans :: Transitions -> Matrix Prob
 initViterbiTrans = V.fromList . map (V.fromList . map snd) 
