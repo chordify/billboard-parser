@@ -39,20 +39,7 @@ allChords = shortChord (Note Nothing N) None :
 
 emptyTransitions :: Transitions
 emptyTransitions = M.fromList 
-                 $ [ ((c1,c2),0.0) | c1 <- allChords, c2 <- allChords ] where
-
-  -- -- adds the transitions to and from N chords
-  -- addNoChords :: Transitions -> Transitions 
-  -- -- insert (N,N) with a high count
-  -- addNoChords ts = M.insertWith (+) ( shortChord (Note Nothing N) None
-                                    -- , shortChord (Note Nothing N) None) 24  
-                 -- $ foldr doN ts allChords 
-  
-  -- -- add (n, anyChord) and vice versa, with a low but constant count
-  -- doN :: ChordLabel -> Transitions -> Transitions
-  -- doN nc t  =  M.insertWith (+) (shortChord (Note Nothing N) None, nc) 1 
-            -- $  M.insertWith (+) (nc, shortChord (Note Nothing N) None) 1 t
-         
+                 $ [ ((c1,c2),0.0) | c1 <- allChords, c2 <- allChords ]          
                    
 -- Get the chords, throw away the rest
 stripData :: BillboardData -> [ChordLabel]
@@ -128,10 +115,17 @@ initViterbiTrans = V.fromList . map (V.fromList . map snd)
   splitEvery n l  = let (row, rest) = splitAt n l in row : splitEvery n rest
 
 countsToProb :: Matrix Prob -> Matrix Prob
-countsToProb = V.map rowProb where
+countsToProb = V.map (replaceZero . rowProb) where
 
   rowProb :: Vector Prob -> Vector Prob
   rowProb v = let s = sum v in scale (1 / s) v
+  
+  replaceZero :: Vector Prob -> Vector Prob
+  replaceZero = V.map repl where 
+    
+    repl :: Prob -> Prob
+    repl 0.0 = 1.0e-10
+    repl p   = p
   
 --------------------------------------------------------------------------------
 -- Command line interface
