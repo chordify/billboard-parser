@@ -78,6 +78,17 @@ tatumsPerBar (TimeSig (beats , 4)) = 2 * beats
 tatumsPerBar (TimeSig (beats , 8)) = beats
 tatumsPerBar ts = irregularMeterError ts "illegal denominator"
 
+{-
+-- N.B. We currently use a quarter note grid 
+-- (oposed to an earlier eighth note grid)
+tatumsPerBar :: TimeSig -> Int
+tatumsPerBar (TimeSig (beats , 4)) = beats
+tatumsPerBar (TimeSig (12    , 8)) = 4
+tatumsPerBar (TimeSig (beats , 8)) = beats `div` 2
+tatumsPerBar ts = irregularMeterError ts "illegal denominator"
+-}
+
+
 -- | Returns the number of 'BBChord' that are inserted for one ".", based on
 -- a 'TimeSig'nature.
 chordsPerDot :: TimeSig -> Int

@@ -13,7 +13,7 @@ import HarmTrace.Base.MusicTime (TimedData, getData)
 import HarmTrace.Base.MusicRep
 
 import Billboard.BillboardParser ( parseBillboard)
-import Billboard.BillboardData ( BillboardData (..), BBChord (..) )
+import Billboard.BillboardData ( BillboardData (..), BBChord (..), reduceTimedBBChords )
 import Billboard.IOUtils
 
 import System.Environment (getArgs)
@@ -43,7 +43,9 @@ emptyTransitions = M.fromList
                    
 -- Get the chords, throw away the rest
 stripData :: BillboardData -> [ChordLabel]
-stripData = filter isGood . map (simplify . chord . getData) . getSong where
+stripData = filter isGood . map (simplify . chord . getData)
+                          . reduceTimedBBChords . getSong where
+                          
   simplify :: ChordLabel -> ChordLabel
   simplify c = toMajMinChord c { chordRoot = simplifyRoot (chordRoot c)
                                , chordAdditions = []
@@ -137,7 +139,7 @@ main = do (path:_) <- getArgs
           -- putStrLn . show . initViterbiStates . sort $ allChords
           let trns = countsToProb . initViterbiTrans $ ts
           putStrLn . show . initViterbiStates $ allChords
-          putStrLn . disp $ trns
+          putStrLn . dispf $ trns
           -- ([[Prob]], [State ChordLabel])
           encodeFile "transitions.bin" 
              (toLists trns, initViterbiStates allChords)
