@@ -26,6 +26,7 @@ import ChordTrack.Audio.Viterbi
 import ChordTrack.Audio.VectorNumerics
 
 type Transitions = M.Map (ChordLabel, ChordLabel) Prob
+type InitProb    = M.Map ChordLabel Prob
 
 allRoots :: [Root]
 -- To keep things simple, we generate a lot of notes, and then simplify them
@@ -87,6 +88,8 @@ instance (Ord a) => Ord (Chord a) where
 shortChord :: Root -> Shorthand -> ChordLabel
 shortChord r sh = Chord r sh [] 0 1
 
+
+
 -- Pretty-print the transition matrix
 {-
 printTransitions :: Transitions -> String
@@ -101,6 +104,15 @@ printTransitions ts = "\t" ++
                       | ((c1, c2), _) <- M.toAscList ts, c1 == c2 ]          
  -}
  
+ 
+--------------------------------------------------------------------------------
+-- Initial probabilities
+--------------------------------------------------------------------------------
+ 
+doBBSong :: BillboardData -> InitProb -> InitProb
+doBBSong = undefined
+ 
+ 
 --------------------------------------------------------------------------------
 -- Prepare data for use in ChordTrack.Audio.Viterbi
 --------------------------------------------------------------------------------
@@ -110,7 +122,7 @@ initViterbiStates = zip [0 .. ]
 
 initViterbiTrans :: Transitions -> Matrix Prob
 initViterbiTrans = V.fromList . map (V.fromList . map snd) 
-                              . splitEvery 25 . M.toList where
+                              . splitEvery (length allChords) . M.toList where
   -- we know a map is sorted, just split at every 24 elements
   splitEvery :: Int -> [a] -> [[a]]
   splitEvery _ [] = []  
