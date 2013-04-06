@@ -88,8 +88,6 @@ instance (Ord a) => Ord (Chord a) where
 shortChord :: Root -> Shorthand -> ChordLabel
 shortChord r sh = Chord r sh [] 0 1
 
-
-
 -- Pretty-print the transition matrix
 {-
 printTransitions :: Transitions -> String
@@ -108,9 +106,23 @@ printTransitions ts = "\t" ++
 --------------------------------------------------------------------------------
 -- Initial probabilities
 --------------------------------------------------------------------------------
+
+emptyInit :: InitProb
+emptyInit = M.fromList $ zip allChords (repeat 0)    
+
+-- Process all files in the dir
+readInitProbs :: FilePath -> IO InitProb
+readInitProbs fp = do files <- getBBFiles fp
+                      ts    <- foldM readSong emptyInit files
+                      return ts where
+
+readSong :: InitProb -> (FilePath, Int) -> IO InitProb
+readSong ip (fp, _) = 
+  do bb <- readFile fp >>= return . fst . parseBillboard
+     return . M.adjust succ (chord . getData . head . getSong $ bb) $ ip
  
-doBBSong :: BillboardData -> InitProb -> InitProb
-doBBSong = undefined
+-- doBBSong :: BillboardData -> InitProb -> InitProb
+-- doBBSong bb ip = M.adjust succ (chord . getData . head . getSong $ bb) ip
  
  
 --------------------------------------------------------------------------------
