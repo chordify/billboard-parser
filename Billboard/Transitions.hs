@@ -7,7 +7,7 @@ module Main ( main ) where
 import Prelude 
 
 import qualified Data.Map as M
-import qualified Data.Vector as V ( fromList, map)
+-- import qualified Data.Vector as V ( fromList, map)
 -- import Data.Vector                ( Vector )
 
 import HarmTrace.Base.MusicTime (TimedData, getData)
@@ -20,11 +20,12 @@ import Billboard.IOUtils
 import System.Environment (getArgs)
 import Control.Monad (foldM)
 import Data.Monoid (mappend)
-import Data.List (nub ) -- , intercalate)
+import Data.List (nub, intercalate)
 import Data.Binary (encodeFile)
+import Text.Printf (printf)
 
 import ChordTrack.Audio.Viterbi
-import ChordTrack.Audio.VectorNumerics hiding (sum) 
+-- import ChordTrack.Audio.VectorNumerics hiding (sum) 
 
 type Transitions = M.Map (ChordLabel, ChordLabel) Int
 type InitCount   = M.Map ChordLabel Int
@@ -134,14 +135,6 @@ readInitCounts sts fp = do files <- getBBFiles fp
 initViterbiStates :: [ChordLabel] -> [State ChordLabel]
 initViterbiStates = zip [0 .. ]
 
--- initViterbiTrans :: Transitions -> Matrix Prob
--- initViterbiTrans = V.fromList . map (V.fromList . map snd) 
-                              -- . splitEvery (length allChords) . M.toList where
-  -- -- we know a map is sorted, just split at every 24 elements
-  -- splitEvery :: Int -> [a] -> [[a]]
-  -- splitEvery _ [] = []  
-  -- splitEvery n l  = let (row, rest) = splitAt n l in row : splitEvery n rest
-
 initViterbiTrans :: [State ChordLabel] -> Transitions -> [[Prob]]
 initViterbiTrans sts trns = map rowProb chrds  where
   
@@ -157,24 +150,20 @@ initViterbiTrans sts trns = map rowProb chrds  where
   chrds :: [ChordLabel]
   chrds = snd $ unzip sts
 
-
--- countsToProb :: Matrix Prob -> Matrix Prob
--- countsToProb = V.map (replaceZero . rowProb) where
-
-  -- rowProb :: Vector Prob -> Vector Prob
-  -- rowProb v = let s = sum v in scale (1 / s) v
-  
-  -- replaceZero :: Vector Prob -> Vector Prob
-  -- replaceZero = V.map replZero where 
-  
 --------------------------------------------------------------------------------
--- Command line interface
+-- Utilities
 --------------------------------------------------------------------------------
 
 replZero :: Prob -> Prob
 replZero 0.0 = 1.0e-10
 replZero p   = p
   
+-- | Displaying a matrix
+disp :: (a -> String) -> [[a]] -> String
+disp shw = intercalate "\n" . map dispRow
+
+  where dispRow = intercalate " " . foldr (\j js -> shw j : js ) [] 
+
 --------------------------------------------------------------------------------
 -- Command line interface
 --------------------------------------------------------------------------------
@@ -189,7 +178,7 @@ main = do (path:_) <- getArgs
           initp <- readInitCounts states path
           print states
           print initp
-          print trns
+          putStrLn . disp (printf "\t%.2f") $ trns
           -- putStrLn . dispf $ trns
           -- ( [State ChordLabel], [Prob], [[Prob]] )
           encodeFile "transitions.bin" 
