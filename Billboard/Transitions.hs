@@ -1,9 +1,10 @@
 {-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TupleSections              #-}
 
 module Main ( main ) where
 
-import Prelude hiding (sum)
+import Prelude 
 
 import qualified Data.Map as M
 import qualified Data.Vector as V ( fromList, map)
@@ -23,9 +24,9 @@ import Data.List (nub ) -- , intercalate)
 import Data.Binary (encodeFile)
 
 import ChordTrack.Audio.Viterbi
-import ChordTrack.Audio.VectorNumerics
+import ChordTrack.Audio.VectorNumerics hiding (sum) 
 
-type Transitions = M.Map (ChordLabel, ChordLabel) Prob
+type Transitions = M.Map (ChordLabel, ChordLabel) Int
 type InitCount   = M.Map ChordLabel Int
 
 allRoots :: [Root]
@@ -40,7 +41,7 @@ allChords = shortChord (Note Nothing N) None :
 
 emptyTransitions :: Transitions
 emptyTransitions = M.fromList 
-                 $ [ ((c1,c2),0.0) | c1 <- allChords, c2 <- allChords ]          
+                 $ [ ((c1,c2),0) | c1 <- allChords, c2 <- allChords ]          
                    
 -- Get the chords, throw away the rest
 stripData :: BillboardData -> [ChordLabel]
@@ -133,22 +134,38 @@ readInitCounts sts fp = do files <- getBBFiles fp
 initViterbiStates :: [ChordLabel] -> [State ChordLabel]
 initViterbiStates = zip [0 .. ]
 
-initViterbiTrans :: Transitions -> Matrix Prob
-initViterbiTrans = V.fromList . map (V.fromList . map snd) 
-                              . splitEvery (length allChords) . M.toList where
-  -- we know a map is sorted, just split at every 24 elements
-  splitEvery :: Int -> [a] -> [[a]]
-  splitEvery _ [] = []  
-  splitEvery n l  = let (row, rest) = splitAt n l in row : splitEvery n rest
+-- initViterbiTrans :: Transitions -> Matrix Prob
+-- initViterbiTrans = V.fromList . map (V.fromList . map snd) 
+                              -- . splitEvery (length allChords) . M.toList where
+  -- -- we know a map is sorted, just split at every 24 elements
+  -- splitEvery :: Int -> [a] -> [[a]]
+  -- splitEvery _ [] = []  
+  -- splitEvery n l  = let (row, rest) = splitAt n l in row : splitEvery n rest
 
-countsToProb :: Matrix Prob -> Matrix Prob
-countsToProb = V.map (replaceZero . rowProb) where
-
-  rowProb :: Vector Prob -> Vector Prob
-  rowProb v = let s = sum v in scale (1 / s) v
+initViterbiTrans :: [State ChordLabel] -> Transitions -> [[Prob]]
+initViterbiTrans sts trns = map rowProb chrds  where
   
-  replaceZero :: Vector Prob -> Vector Prob
-  replaceZero = V.map replZero where 
+  rowProb :: ChordLabel -> [Prob]
+  rowProb fromC = let rc = rowCounts fromC 
+                      s  = fromIntegral $ sum rc
+                  in  map (\c -> replZero $  (fromIntegral c / s)) rc
+                  
+  rowCounts :: ChordLabel -> [Int]
+  rowCounts fromC = map ((M.!) trns) 
+                        (map (fromC,) chrds)
+
+  chrds :: [ChordLabel]
+  chrds = snd $ unzip sts
+
+
+-- countsToProb :: Matrix Prob -> Matrix Prob
+-- countsToProb = V.map (replaceZero . rowProb) where
+
+  -- rowProb :: Vector Prob -> Vector Prob
+  -- rowProb v = let s = sum v in scale (1 / s) v
+  
+  -- replaceZero :: Vector Prob -> Vector Prob
+  -- replaceZero = V.map replZero where 
   
 --------------------------------------------------------------------------------
 -- Command line interface
@@ -165,14 +182,16 @@ replZero p   = p
 main :: IO ()
 main = do (path:_) <- getArgs
           ts    <- statsAll path
-          -- putStrLn . show . initViterbiStates . sort $ allChords
-          let trns   = countsToProb . initViterbiTrans $ ts
-              states = initViterbiStates allChords
+          -- print $ allChords
+          -- print . initViterbiTrans $ ts
+          let states = initViterbiStates allChords
+              trns   = initViterbiTrans states ts
           initp <- readInitCounts states path
-          putStrLn . show  $ states
-          putStrLn . show  $ initp
-          putStrLn . dispf $ trns
+          print states
+          print initp
+          print trns
+          -- putStrLn . dispf $ trns
           -- ( [State ChordLabel], [Prob], [[Prob]] )
           encodeFile "transitions.bin" 
-             (states, initp, toLists trns)
+             (states, initp, trns)
              
