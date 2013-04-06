@@ -7,7 +7,7 @@ import Prelude hiding (sum)
 
 import qualified Data.Map as M
 import qualified Data.Vector as V ( fromList, map)
-import Data.Vector                ( Vector )
+-- import Data.Vector                ( Vector )
 
 import HarmTrace.Base.MusicTime (TimedData, getData)
 import HarmTrace.Base.MusicRep
@@ -26,7 +26,7 @@ import ChordTrack.Audio.Viterbi
 import ChordTrack.Audio.VectorNumerics
 
 type Transitions = M.Map (ChordLabel, ChordLabel) Prob
-type InitProb    = M.Map ChordLabel Prob
+type InitCount   = M.Map ChordLabel Int
 
 allRoots :: [Root]
 -- To keep things simple, we generate a lot of notes, and then simplify them
@@ -107,23 +107,24 @@ printTransitions ts = "\t" ++
 -- Initial probabilities
 --------------------------------------------------------------------------------
 
-emptyInit :: InitProb
+emptyInit :: InitCount
 emptyInit = M.fromList $ zip allChords (repeat 0)    
 
 -- Process all files in the dir
-readInitProbs :: FilePath -> IO InitProb
-readInitProbs fp = do files <- getBBFiles fp
-                      ts    <- foldM readSong emptyInit files
-                      return ts where
+readInitCounts :: [State ChordLabel] -> FilePath -> IO [Prob]
+readInitCounts sts fp = do files <- getBBFiles fp
+                           ic    <- foldM readSong emptyInit files -- InitCount
+                           let l = fromIntegral . length $ files
+                           return . map (toProb ic l) $ sts where
 
-readSong :: InitProb -> (FilePath, Int) -> IO InitProb
-readSong ip (fp, _) = 
-  do bb <- readFile fp >>= return . fst . parseBillboard
-     return . M.adjust succ (chord . getData . head . getSong $ bb) $ ip
- 
--- doBBSong :: BillboardData -> InitProb -> InitProb
--- doBBSong bb ip = M.adjust succ (chord . getData . head . getSong $ bb) ip
- 
+  readSong :: InitCount -> (FilePath, Int) -> IO InitCount
+  readSong ip (f, _) = 
+    do bb <- readFile f >>= return . fst . parseBillboard
+       return . M.adjust succ (chord . getData . head . getSong $ bb) $ ip 
+    
+  toProb :: InitCount -> Float -> State ChordLabel -> Prob 
+  toProb ic l s = (fromIntegral $ ic M.! (label s)) / l  
+   
  
 --------------------------------------------------------------------------------
 -- Prepare data for use in ChordTrack.Audio.Viterbi
@@ -159,12 +160,15 @@ countsToProb = V.map (replaceZero . rowProb) where
 
 main :: IO ()
 main = do (path:_) <- getArgs
-          ts <- statsAll path
+          ts    <- statsAll path
           -- putStrLn . show . initViterbiStates . sort $ allChords
-          let trns = countsToProb . initViterbiTrans $ ts
-          putStrLn . show . initViterbiStates $ allChords
+          let trns   = countsToProb . initViterbiTrans $ ts
+              states = initViterbiStates allChords
+          initp <- readInitCounts states path
+          putStrLn . show  $ states
+          putStrLn . show  $ initp
           putStrLn . dispf $ trns
-          -- ([[Prob]], [State ChordLabel])
+          -- ( [State ChordLabel], [Prob], [[Prob]] )
           encodeFile "transitions.bin" 
-             (toLists trns, initViterbiStates allChords)
+             (states, initp, toLists trns)
              
