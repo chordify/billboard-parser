@@ -123,7 +123,7 @@ readInitCounts sts fp = do files <- getBBFiles fp
        return . M.adjust succ (chord . getData . head . getSong $ bb) $ ip 
     
   toProb :: InitCount -> Float -> State ChordLabel -> Prob 
-  toProb ic l s = (fromIntegral $ ic M.! (label s)) / l  
+  toProb ic l s = replZero $ (fromIntegral $ ic M.! (label s)) / l  
    
  
 --------------------------------------------------------------------------------
@@ -148,11 +148,15 @@ countsToProb = V.map (replaceZero . rowProb) where
   rowProb v = let s = sum v in scale (1 / s) v
   
   replaceZero :: Vector Prob -> Vector Prob
-  replaceZero = V.map repl where 
-    
-    repl :: Prob -> Prob
-    repl 0.0 = 1.0e-10
-    repl p   = p
+  replaceZero = V.map replZero where 
+  
+--------------------------------------------------------------------------------
+-- Command line interface
+--------------------------------------------------------------------------------
+
+replZero :: Prob -> Prob
+replZero 0.0 = 1.0e-10
+replZero p   = p
   
 --------------------------------------------------------------------------------
 -- Command line interface
