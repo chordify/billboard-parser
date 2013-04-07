@@ -132,6 +132,7 @@ readInitCounts sts fp = do files <- getBBFiles fp
 -- Prepare data for use in ChordTrack.Audio.Viterbi
 --------------------------------------------------------------------------------
 
+-- | a 'State' is tuple of a label and an index
 initViterbiStates :: [ChordLabel] -> [State ChordLabel]
 initViterbiStates = zip [0 .. ]
 
@@ -144,8 +145,7 @@ initViterbiTrans sts trns = map rowProb chrds  where
                   in  map (\c -> replZero $  (fromIntegral c / s)) rc
                   
   rowCounts :: ChordLabel -> [Int]
-  rowCounts fromC = map ((M.!) trns) 
-                        (map (fromC,) chrds)
+  rowCounts fromC = map ((M.!) trns . (fromC,)) chrds
 
   chrds :: [ChordLabel]
   chrds = snd $ unzip sts
@@ -171,13 +171,13 @@ disp shw = intercalate "\n" . map dispRow
 main :: IO ()
 main = do (path:_) <- getArgs
           ts    <- statsAll path
-          -- print $ allChords
-          -- print . initViterbiTrans $ ts
+          putStrLn ("Chords: " ++ show allChords)
+          print ts
           let states = initViterbiStates allChords
               trns   = initViterbiTrans states ts
           initp <- readInitCounts states path
-          print states
-          print initp
+          putStrLn ("States: " ++ show states)
+          putStrLn ("Initial Probabilities: " ++ show initp)
           putStrLn . disp (printf "\t%.2f") $ trns
           -- putStrLn . dispf $ trns
           -- ( [State ChordLabel], [Prob], [[Prob]] )
