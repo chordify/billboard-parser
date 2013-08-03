@@ -60,8 +60,6 @@ import Billboard.Annotation ( Annotation (..), isStart, isStruct
                             , getLabel, Label, isEndAnno
                             , isFirstChord, isLastChord)
 
-import Data.List (partition)
-
 -- | The 'BillboardData' datatype stores all information that has been extracted
 -- from a Billboard chord annotation
 data BillboardData = BillboardData { getTitle   :: Title    
@@ -89,12 +87,13 @@ data BBChord = BBChord { annotations :: [Annotation]
                        } 
 
 instance Show BBChord where 
-  show (BBChord [] Beat  _c) = show Beat
-  show (BBChord bd Beat  _c) = show Beat ++ show bd
-  show (BBChord [] w      c) = show w ++ ' ' : show c -- ++ (show $ duration c)
-  show (BBChord bd w      c) = 
-    let (srt, end) = partition isStart bd
-    in  show w ++ concatMap show srt ++ ' ' : show c ++ ' ' : concatMap show end
+  show = show . chord
+  -- show (BBChord [] Beat  _c) = show Beat
+  -- show (BBChord bd Beat  _c) = show Beat ++ show bd
+  -- show (BBChord [] w      c) = show w ++ ' ' : show c -- ++ (show $ duration c)
+  -- show (BBChord bd w      c) = 
+    -- let (srt, end) = partition isStart bd
+    -- in  show w ++ concatMap show srt ++ ' ' : show c ++ ' ' : concatMap show end
 
 instance Ord BBChord where
   compare (BBChord _ _ a) (BBChord _ _ b)
