@@ -138,7 +138,7 @@ pAnnotation =   Chorus         <$ pString "chorus"<* pMabSpcDsh <* pMaybe pLower
             <|> PreVerse       <$ pString "pre" <* pMabSpcDsh <* pString "verse"
             <|> Vocal          <$ pString "vocal"
             <|> Intro          <$ pMaybe (pString "pre") <* pMabSpcDsh 
-                               <* pString "intro" <* pMabSpcDsh <* pMaybe pLower
+                    <* pString "intro" <* pMabSpcDsh <* pMaybe pLower
             <|> Outro          <$ pString "outro"
             <|> Bridge         <$ pString "bridge"
             <|> Interlude      <$ pString "interlude" 
@@ -146,13 +146,12 @@ pAnnotation =   Chorus         <$ pString "chorus"<* pMabSpcDsh <* pMaybe pLower
             <|> Fadeout        <$ pString "fade" <* pMabSpc <* pString "out" 
             <|> Fadein         <$ pString "fade" <* pMabSpc <* pString "in" 
             <|> Solo           <$ pString "solo" 
-            <|> Prechorus      <$ pString "pre"<* pMabSpcDsh <* pString "chorus"
-            <|> Maintheme      <$ pString "main"<* pMabSpcDsh <* pString "theme"
+            <|> Prechorus      <$ pString "pre"<* pMabSpcDsh 
+                    <* pString "chorus" <* pMaybe pTextNr
+            <|> Maintheme      <$ pMaybe (pString "main" <* pMabSpcDsh) <* pString "theme"
             <|> Keychange      <$ pString "key"<* pMabSpcDsh <* pString "change"
-            <|> Secondarytheme <$ pOptWrapPar "secondary" <* pMabSpcDsh 
-                                                      <* pString "theme"
-            <|> Instrumental   <$ pString "instrumental" 
-                               <* pMaybe (pString " break")
+            <|> Secondarytheme <$ pOptWrapPar "secondary" <* pMabSpcDsh <* pString "theme"
+            <|> Instrumental   <$ pString "instrumental" <* pMaybe (pString " break")
             <|> Coda           <$ pString "coda"
             <|> Ending         <$ pString "ending"
             <|> Talking        <$ pString "spoken" <* pMaybe (pString " verse")
@@ -215,8 +214,9 @@ pInstr = pInstrument <<|> pUnknownInstr
 -- parses the different kind of lead instruments
 pInstrument :: Parser Instrument
 pInstrument =   Guitar         <$ pString "guitar"
-            <|> Voice          <$ pString "vo" 
-                               <* (pString "ice"    <|>  pString "cal")
+            <|> Voice          <$ (pString "vo" 
+                                   <* (pString "ice"    <|>  pString "cal"))
+            <|> Spoken         <$ (pString "spoken" <|> pString "rap")
             <|> Violin         <$ (pString "fiddle" <|>  
                                   (pString "violin" <* pMaybe (pSym 's')))
             <|> Banjo          <$ pString "banjo"
@@ -261,6 +261,9 @@ pInstrument =   Guitar         <$ pString "guitar"
             <|> Accordion      <$ pString "accordion"
             <|> Tambourine     <$ pString "tambourine"
             <|> Kazoo          <$ pString "kazoo"
+            <|> Woodwinds      <$ pString "woodwinds"
+            <|> Choir          <$ pString "choir"
+            <|> Crowd          <$ pString "crowd"
 
 pUnknownInstr :: Parser Instrument
 pUnknownInstr = UnknownInstr <$> pList1 pLower

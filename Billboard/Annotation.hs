@@ -64,7 +64,7 @@ data Instrument = Guitar | Voice | Violin   | Banjo | Synthesizer | Saxophone
                 | Hammondorgan   | Harpsichord | Cello    | Acousticguitar
                 | Bassguitar     | Strings  | SteelDrum   | Vibraphone | Bongos
                 | Steelguitar    | Horn     | Sitar | Barisaxophone | Accordion
-                | Tambourine     | Kazoo
+                | Tambourine     | Kazoo  | Woodwinds   | Choir | Spoken | Crowd
                 | UnknownInstr String -- ^ a catch all description for 
                                       -- unrecognised instruments
        deriving (Show, Eq)
