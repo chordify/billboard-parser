@@ -26,7 +26,7 @@ import Control.Monad (void)
 
 import Data.List (genericLength)
 
-import HarmTrace.Base.MusicTime (TimedData, onset, offset, getData)
+import HarmTrace.Base.MusicTime (Timed, onset, offset, getData)
 import HarmTrace.Base.MusicRep (Chord (..))
 
 import Billboard.BillboardParser ( parseBillboard)
@@ -84,30 +84,30 @@ rangeTest d = do let (avgL, minL, maxL) = getMinMaxBeatLen . getSong $ d
                  putStrLn ("average beat length: " ++ show avgL)
                  return . applyTestToList (testf minL maxL) . getSong $ d where
 
-    testf :: Double -> Double -> TimedData BBChord -> Test
+    testf :: Double -> Double -> Timed BBChord -> Test
     testf minLen maxLen t = 
       TestCase (assertBool  ("Odd Beat length detected for:\n" ++ showChord t) 
                             (rangeCheck minLen maxLen t))
 
-showChord :: TimedData BBChord -> String
+showChord :: Timed BBChord -> String
 showChord t =  (show . chord . getData $ t) ++ ", length: " 
             ++ (show . beatDuration $ t) ++ " @ " ++ (show . onset $ t)
 
--- | Returns True if the 'beatDuration' of a 'TimedData' item lies between 
+-- | Returns True if the 'beatDuration' of a 'Timed' item lies between 
 -- the minimum (first argument) and the maximum (second argument) value
-rangeCheck :: Double -> Double -> TimedData BBChord -> Bool
+rangeCheck :: Double -> Double -> Timed BBChord -> Bool
 rangeCheck minLen maxLen t = let len = beatDuration t 
                              in  (len >= minLen && len <= maxLen) ||
                                  -- None chords are not expected to be 
                                  -- beat aligned and are ignored
                                  (isNoneBBChord . getData $ t)
 
--- | Given a 'TimedData', returns a triplet containing the average beat length,
+-- | Given a 'Timed', returns a triplet containing the average beat length,
 -- the minimum beat length and the maximum beat length, respectively.
-getMinMaxBeatLen :: [TimedData BBChord] -> (Double, Double, Double)
+getMinMaxBeatLen :: [Timed BBChord] -> (Double, Double, Double)
 getMinMaxBeatLen = getMinMaxBeatLen' testBeatDeviationMultiplier
 
-getMinMaxBeatLen' :: Double -> [TimedData BBChord] -> (Double, Double, Double)
+getMinMaxBeatLen' :: Double -> [Timed BBChord] -> (Double, Double, Double)
 getMinMaxBeatLen' mult song =
   let chds   = filter (not . isNoneBBChord . getData ) song
       avgLen = (sum $ map beatDuration chds) / (genericLength chds)
@@ -131,7 +131,7 @@ reduceTestVerb bbd =
      return . applyTestToList cTest $ 
               zip (expandTimedBBChords . reduceTimedBBChords $ cs) cs where 
                           
-  cTest :: (TimedData BBChord, TimedData BBChord) -> Test 
+  cTest :: (Timed BBChord, Timed BBChord) -> Test 
   cTest (a,b) = TestCase 
     (assertBool ("non-maching chords: " ++ show a ++ " and " ++ show b)
     (getData a `bbChordEq` getData b))
@@ -144,7 +144,7 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
   chordShorthand cA == chordShorthand cB && 
   chordAdditions cA == chordAdditions cB   
   
-getOffBeats :: Double -> [TimedData BBChord] -> [TimedData BBChord]
+getOffBeats :: Double -> [Timed BBChord] -> [Timed BBChord]
 getOffBeats th song = let (_avg, mn, mx) = getMinMaxBeatLen' th song
                       in  filter (not . rangeCheck mn mx) song
 
@@ -154,7 +154,7 @@ getOffBeats th song = let (_avg, mn, mx) = getMinMaxBeatLen' th song
 --------------------------------------------------------------------------------
 
 -- | Calculates the duration of a beat
-beatDuration :: TimedData a -> Double
+beatDuration :: Timed a -> Double
 beatDuration t = offset t - onset t
 
 -- | Applies a test to a list of testable items

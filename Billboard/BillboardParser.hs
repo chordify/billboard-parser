@@ -22,23 +22,23 @@ module Billboard.BillboardParser ( pBillboard
                                  , parseBillboard
                                  , acceptableBeatDeviationMultiplier ) where
 
-import Data.List (genericLength, partition)
-import Control.Arrow (first)
+import Data.List                      ( genericLength, partition )
+import Control.Arrow                  ( first )
 -- import Control.Monad.State
 import Text.ParserCombinators.UU
 
-import HarmTrace.Base.Parsing hiding (pLineEnd)
-import HarmTrace.Base.MusicRep hiding (isNone)
-import HarmTrace.Base.MusicTime( TimedData (..), timedData
-                               , BarTime (..), onset, offset)
-import HarmTrace.Base.ChordTokenizer (pRoot, pChord)
+import HarmTrace.Base.Parsing  hiding ( pLineEnd )
+import HarmTrace.Base.MusicRep
+import HarmTrace.Base.MusicTime       ( Timed (..), timed
+                                      , BarTime (..), onset, offset )
+import HarmTrace.Base.ChordTokenizer  ( pRoot, pChord )
 
-import Billboard.BeatBar  ( TimeSig  (..), BeatWeight (..), tatumsPerBar
-                          , chordsPerDot )
+import Billboard.BeatBar              ( TimeSig  (..), BeatWeight (..)
+                                      , tatumsPerBar, chordsPerDot )
 import Billboard.BillboardData 
-import Billboard.Annotation (  Annotation (..), Label (..)
-                            , Instrument (..), Description (..), isStart
-                            , isRepeat, getRepeats)
+import Billboard.Annotation           (  Annotation (..), Label (..)
+                                      , Instrument (..), Description (..)
+                                      , isStart, isRepeat, getRepeats )
 
 --------------------------------------------------------------------------------
 -- Constants
@@ -63,9 +63,7 @@ parseBillboard = parseDataWithErrors pBillboard
 pBillboard :: Parser BillboardData
 pBillboard = do (a, t, ts, r) <- pHeader
                 c             <- pChordLinesPost ts
-                -- before we return the chords we store the index of the 
-                -- chord in the 'BBChord' type (setChordIxsT)
-                return (BillboardData a t ts r (setChordIxsT c)) where
+                return (BillboardData a t ts r c) where
 
              
 --------------------------------------------------------------------------------
@@ -285,37 +283,37 @@ pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 --------------------------------------------------------------------------------
 
 -- Top-level parser for parsing chords sequence lines an annotations
-pChordLinesPost :: TimeSig -> Parser [TimedData BBChord]
+pChordLinesPost :: TimeSig -> Parser [Timed BBChord]
 pChordLinesPost ts = (interp . setTiming) <$> pChordLines ts 
 
 -- labels every line with the corresponding starting and ending times (where
 -- the end time is actually the start time of the next chord line)
-setTiming :: [(Double, a)] -> [TimedData a]
+setTiming :: [(Double, a)] -> [Timed a]
 setTiming [ ] = []
 setTiming [_] = [] -- remove the end 
-setTiming (a : b : cs) = TimedData (snd a) [Time (fst a), Time (fst b)] 
+setTiming (a : b : cs) = Timed (snd a) [Time (fst a), Time (fst b)] 
                          : setTiming (b:cs)
 
 -- interpolates the on- and offset for every 'BBChord' in a timestamped list  
 -- of 'BBChord's 
-interp :: [TimedData [BBChord]] -> [TimedData BBChord]
+interp :: [Timed [BBChord]] -> [Timed BBChord]
 interp = concatMap interpolate . fixBothBeatDev where
 
-  -- splits a 'TimedData [BBChord]' into multiple instances interpolating
+  -- splits a 'Timed [BBChord]' into multiple instances interpolating
   -- the off an onsets by evenly dividing the time for every beat.
-  interpolate :: TimedData [BBChord] -> [TimedData BBChord]
+  interpolate :: Timed [BBChord] -> [Timed BBChord]
   interpolate td = 
     let on  = onset td
         off = offset td
         dat = getData td
         bt  = (off - on) / genericLength dat
-    in  zipWith3 timedData dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
+    in  zipWith3 timed dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
 
 -- The beat deviation occurs both at the beginning and at the end of piece,
 -- but the principle of correction is exactly the same (but mirrored). Hence
 -- 'fixForward' and 'fixBackward' both rely on 'fixOddLongBeats'
-fixForward, fixBackward, fixBothBeatDev :: [TimedData [BBChord]] 
-                                        -> [TimedData [BBChord]]
+fixForward, fixBackward, fixBothBeatDev :: [Timed [BBChord]] 
+                                        -> [Timed [BBChord]]
 fixBothBeatDev = fixBackward . fixForward
 fixForward     = fixOddLongBeats Forward 
                  acceptableBeatDeviationMultiplier
@@ -335,8 +333,8 @@ data Direction = Forward | Backward
 -- the average beat length of the previous line to predict the beat durations 
 -- of the chords and fill the /gap/ between the last chord and the /silence/
 -- annotation with additional 'N' chords.
-fixOddLongBeats :: Direction -> Double -> [TimedData [BBChord]] 
-                -> [TimedData [BBChord]]
+fixOddLongBeats :: Direction -> Double -> [Timed [BBChord]] 
+                -> [Timed [BBChord]]
 fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ cs)  where
 
   -- separate the lines containing silence N chords at the beginning
@@ -347,7 +345,7 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
   avgBt = avgBeatLens . filter (and . map (not . isNoneBBChord) . getData ) $ cs        
   
   -- Marks the start and beginning of the chords sequence
-  markStartEnd :: Direction -> [TimedData [BBChord]] -> [TimedData [BBChord]]
+  markStartEnd :: Direction -> [Timed [BBChord]] -> [Timed [BBChord]]
   markStartEnd _        []         = []
   markStartEnd Forward  (fc : rst) = fmap markStart fc : rst
   markStartEnd Backward (fc : rst) = fmap markEnd  fc : rst  
@@ -361,7 +359,7 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
               in reverse (addEnd (Anno Chords) lst : rst)
   
   -- Fixes the distorted interpolation
-  fixOddLongLine :: [TimedData [BBChord]] -> [TimedData [BBChord]]
+  fixOddLongLine :: [Timed [BBChord]] -> [Timed [BBChord]]
   fixOddLongLine (l : n : ls ) = 
     case (avgBeatLen l >= ((1 + beatDev) * avgBt), dir) of
       (True, Forward ) -> fmap (replicateNone (avgBeatLen n) l ++) l : n : ls
@@ -370,7 +368,7 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
   fixOddLongLine l             = l
   
   -- fills the "gap" with none chords
-  replicateNone :: Double -> TimedData [BBChord] -> [BBChord]
+  replicateNone :: Double -> Timed [BBChord] -> [BBChord]
   replicateNone prvBeat d = 
     -- calculate the number of beats expected, minus the chords in the list
     let nrN  = (round ((offset d - onset d) / prvBeat)) - (length . getData $ d) 
@@ -380,11 +378,11 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
                 (noneBBChord : replicate (pred nrN) repN)
   
   -- Calculates the average length of a beat in a list of Timed BBChords
-  avgBeatLens :: [TimedData [BBChord]] -> Double
+  avgBeatLens :: [Timed [BBChord]] -> Double
   avgBeatLens l = (sum . map avgBeatLen $ l) / genericLength l 
   
   -- Calculates the average length of a beat
-  avgBeatLen :: TimedData [BBChord] -> Double
+  avgBeatLen :: Timed [BBChord] -> Double
   avgBeatLen td = (offset td - onset td) / genericLength (getData td)   
     
 --------------------------------------------------------------------------------
