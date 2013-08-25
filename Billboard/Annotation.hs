@@ -32,7 +32,7 @@ module Billboard.Annotation ( -- * Types for storing annotations encountered in 
                             , getLabel
                             ) where
 
-import HarmTrace.Base.MusicRep (Root)
+import HarmTrace.Base.Chord (Root)
 
 -- | an 'Annotation' occurs either at the start or at the end of a chord 
 -- sequence line.

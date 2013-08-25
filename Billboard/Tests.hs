@@ -27,7 +27,7 @@ import Control.Monad (void)
 import Data.List (genericLength)
 
 import HarmTrace.Base.MusicTime (Timed, onset, offset, getData)
-import HarmTrace.Base.MusicRep (Chord (..))
+import HarmTrace.Base.Chord     (Chord (..))
 
 import Billboard.BillboardParser ( parseBillboard)
 import Billboard.BillboardData ( BillboardData (..), BBChord (..), isNoneBBChord

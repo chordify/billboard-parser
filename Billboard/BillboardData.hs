@@ -51,7 +51,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                ) where
 
 -- HarmTrace stuff
-import HarmTrace.Base.MusicRep
+import HarmTrace.Base.Chord
 import HarmTrace.Base.MusicTime ( Timed (..), timedBT, getData
                                 , onset, offset, concatTimed )
 

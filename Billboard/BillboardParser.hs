@@ -27,11 +27,11 @@ import Control.Arrow                  ( first )
 -- import Control.Monad.State
 import Text.ParserCombinators.UU
 
-import HarmTrace.Base.Parsing  hiding ( pLineEnd )
-import HarmTrace.Base.MusicRep
+import HarmTrace.Base.Parse.General  hiding ( pLineEnd )
+import HarmTrace.Base.Parse.ChordParser     ( pRoot, pChord )
+import HarmTrace.Base.Chord
 import HarmTrace.Base.MusicTime       ( Timed (..), timed
                                       , BarTime (..), onset, offset )
-import HarmTrace.Base.ChordTokenizer  ( pRoot, pChord )
 
 import Billboard.BeatBar              ( TimeSig  (..), BeatWeight (..)
                                       , tatumsPerBar, chordsPerDot )
