@@ -27,7 +27,7 @@ import Billboard.Tests ( mainTestFile, mainTestDir, rangeTest
 import Billboard.IOUtils 
 
 -- harmtrace imports
-import HarmTrace.Base.MusicTime (TimedData (..), dropTimed)
+import HarmTrace.Base.MusicTime (Timed (..), dropTimed)
 
 -- other libraries
 import System.Console.ParseArgs
@@ -147,7 +147,7 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
 -- Parsing Billboard data verbosely
 -------------------------------------------------------------------------------- 
 
-parseFile :: ([TimedData BBChord] -> [TimedData BBChord]) -> FilePath -> IO ()
+parseFile :: ([Timed BBChord] -> [Timed BBChord]) -> FilePath -> IO ()
 parseFile cf fp = do inp <- readFile fp
                      let (bbd, err) = parseBillboard inp
                      printBillboard bbd
@@ -165,7 +165,7 @@ parseDir :: FilePath -> IO ()
 parseDir d = void . bbdir oneSliceSalami $ d where
     -- parses a billboard file and presents the user with condenced output
     -- If parsing errors are encountered, they are printed
-    oneSliceSalami :: FilePath -> IO ([TimedData BBChord])
+    oneSliceSalami :: FilePath -> IO ([Timed BBChord])
     oneSliceSalami f = 
       do inp <- readFile f
          let (bbd, err) = parseBillboard inp
@@ -218,6 +218,6 @@ runResults d = do let ths = [0.05, 0.075, 0.1, 0.15, 0.25]
                                putStrLn $ intercalate "\t" (fp : map show r)
                                return r
                                
-    offRatio :: [TimedData BBChord] -> Double -> Double
+    offRatio :: [Timed BBChord] -> Double -> Double
     offRatio td th = genericLength (getOffBeats th td) / genericLength td 
                            

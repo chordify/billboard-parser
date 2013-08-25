@@ -32,7 +32,7 @@ module Billboard.Annotation ( -- * Types for storing annotations encountered in 
                             , getLabel
                             ) where
 
-import HarmTrace.Base.MusicRep (Root)
+import HarmTrace.Base.Chord (Root)
 
 -- | an 'Annotation' occurs either at the start or at the end of a chord 
 -- sequence line.
@@ -64,7 +64,7 @@ data Instrument = Guitar | Voice | Violin   | Banjo | Synthesizer | Saxophone
                 | Hammondorgan   | Harpsichord | Cello    | Acousticguitar
                 | Bassguitar     | Strings  | SteelDrum   | Vibraphone | Bongos
                 | Steelguitar    | Horn     | Sitar | Barisaxophone | Accordion
-                | Tambourine     | Kazoo
+                | Tambourine     | Kazoo  | Woodwinds   | Choir | Spoken | Crowd
                 | UnknownInstr String -- ^ a catch all description for 
                                       -- unrecognised instruments
        deriving (Show, Eq)

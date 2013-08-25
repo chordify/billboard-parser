@@ -31,9 +31,9 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , addEnd
                                , addLabel
                                , addStartEnd
-                               , getDuration
+                               -- , getDuration
                                , getStructAnn
-                               , setChordIxsT
+                               -- , setChordIxsT
                                -- ** Tests
                                , isStructSegStart
                                , isNoneBBChord
@@ -41,8 +41,8 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , hasAnnotations
                                , isEnd
                                -- ** Chord reduction
-                               , reduceBBChords
-                               , expandBBChords
+                               -- , reduceBBChords
+                               -- , expandBBChords
                                , reduceTimedBBChords
                                , expandTimedBBChords
                                -- * Showing
@@ -51,14 +51,14 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                ) where
 
 -- HarmTrace stuff
-import HarmTrace.Base.MusicRep  hiding (isNone)
-import HarmTrace.Base.MusicTime (TimedData (..), timedDataBT, getData
-                                , onset, offset, concatTimedData)
+import HarmTrace.Base.Chord
+import HarmTrace.Base.MusicTime ( Timed (..), timedBT, getData
+                                , onset, offset, concatTimed )
 
 import Billboard.BeatBar
-import Billboard.Annotation ( Annotation (..), isStart, isStruct
-                            , getLabel, Label, isEndAnno
-                            , isFirstChord, isLastChord)
+import Billboard.Annotation     ( Annotation (..), isStart, isStruct
+                                , getLabel, Label, isEndAnno
+                                , isFirstChord, isLastChord )
 
 -- | The 'BillboardData' datatype stores all information that has been extracted
 -- from a Billboard chord annotation
@@ -66,7 +66,7 @@ data BillboardData = BillboardData { getTitle   :: Title
                                    , getArtist  :: Artist 
                                    , getTimeSig :: TimeSig 
                                    , getKeyRoot :: Root    
-                                   , getSong    :: [TimedData BBChord]
+                                   , getSong    :: [Timed BBChord]
                                    } deriving Show
 
 -- | Represents the artists of the piece
@@ -113,7 +113,7 @@ instance Eq BBChord where
 -- | A chord label with no root, shorthand or other information to represent
 -- a none harmonic sections
 noneBBChord :: BBChord
-noneBBChord = BBChord [] Change noneLabel {duration =1}
+noneBBChord = BBChord [] Change NoChord
 
 -- | Returns True if the 'BBChord' represents a starting point of a structural
 -- segment
@@ -171,29 +171,29 @@ addLabel lab (c:cs)  = addStart lab c : foldr step [] cs where
   step x [] = [addEnd lab x] -- add a label to the last element of the list
   step x xs = x : xs
 
--- | Sets the indexes of a list of 'TimedData' 'BBChord's (starting at 0)
-setChordIxsT :: [TimedData BBChord] -> [TimedData BBChord]
-setChordIxsT cs = zipWith (fmap . flip setChordIx) [0..] cs   
+-- | Sets the indexes of a list of 'Timed' 'BBChord's (starting at 0)
+-- setChordIxsT :: [Timed BBChord] -> [Timed BBChord]
+-- setChordIxsT cs = zipWith (fmap . flip setChordIx) [0..] cs   
   
--- | Sets the indexes of a list of 'BBChords' (starting at 0)
-setChordIxs :: [BBChord] -> [BBChord]
-setChordIxs cs = zipWith setChordIx cs [0..]
+-- -- | Sets the indexes of a list of 'BBChords' (starting at 0)
+-- setChordIxs :: [BBChord] -> [BBChord]
+-- setChordIxs cs = zipWith setChordIx cs [0..]
   
--- sets the index of a 'BBChord' (should not be exported)
-setChordIx :: BBChord -> Int -> BBChord 
-setChordIx rc i = let x = chord rc in rc {chord = x {getLoc = i} }
+-- -- sets the index of a 'BBChord' (should not be exported)
+-- setChordIx :: BBChord -> Int -> BBChord 
+-- setChordIx rc i = let x = chord rc in rc {chord = x {getLoc = i} }
 
 -- | Returns the duration of the chord (the unit of the duration can be 
 -- application dependent, but will generally be measured in eighth notes)
 -- If the data comes directly from the parser the duration will be 1 for
 -- all 'BBChord's. However, if it has been \reduced\ with 'reduceBBChords'
 -- the duration will be the number of consecutive tatum units.
-getDuration :: BBChord -> Int
-getDuration = duration . chord
+-- getDuration :: BBChord -> Int
+-- getDuration = duration . chord
 
 -- sets the duration of an 'BBChord'
-setDuration :: BBChord -> Int -> BBChord
-setDuration c i = let x = chord c in c { chord = x { duration = i } }
+-- setDuration :: BBChord -> Int -> BBChord
+-- setDuration c i = let x = chord c in c { chord = x { duration = i } }
   
 -- | Strips the time stamps from BillBoardData and concatenates all 'BBChords'
 getBBChords :: BillboardData -> [BBChord]
@@ -231,11 +231,11 @@ getStructAnn = filter ( isStruct . getLabel ) . annotations
 -- beats that the chord should sound), every 'BBChord' is replaced by /x/ 
 -- 'BBChord's with the same properties, but whit a duration of 1 beat, where /x/ 
 -- is the duration of the original 'BBChord'
-expandBBChords :: [BBChord] -> [BBChord]
-expandBBChords = setChordIxs . concatMap replic where
-  replic c = let x = setDuration c 1 
-             in  x : replicate (pred . duration $ chord c) 
-                               x { weight = Beat, annotations = []}
+-- expandBBChords :: [BBChord] -> [BBChord]
+-- expandBBChords = setChordIxs . concatMap replic where
+  -- replic c = let x = setDuration c 1 
+             -- in  x : replicate (pred . duration $ chord c) 
+                               -- x { weight = Beat, annotations = []}
                                
 -- | The inverse function of 'expandChordDur': given a list of 'BBChords' that 
 -- all have a duration of 1 beat, all subsequent /x/ 'BBChords' with the same 
@@ -251,43 +251,41 @@ expandBBChords = setChordIxs . concatMap replic where
 --
 -- >>> reduceBBChords (reduceBBChords cs) = (reduceBBChords cs)
 --
--- hold. This has been tested on the first tranch of 649 Billboard songs
-reduceBBChords :: [BBChord] -> [BBChord]
-reduceBBChords = setChordIxs . foldr group []  where
+-- hold. This has been tested on the first tranche of 649 Billboard songs
+-- reduceBBChords :: [BBChord] -> [BBChord]
+-- reduceBBChords = setChordIxs . foldr group []  where
   
-  group :: BBChord -> [BBChord] -> [BBChord]
-  group c [] = [c]
-  group c (h:t)
-    | c `bbChordEq` h  = setDuration c (succ . duration $ chord h): t
-    | otherwise        = c : h : t
+  -- group :: BBChord -> [BBChord] -> [BBChord]
+  -- group c [] = [c]
+  -- group c (h:t)
+    -- | c `bbChordEq` h  = setDuration c (succ . duration $ chord h): t
+    -- | otherwise        = c : h : t
 
 
 -- | Returns the reduced chord sequences, where repeated chords are merged
 -- into one 'BBChord', similar to 'reduceBBChords', but then wrapped in a 
--- 'TimedData' type.
-reduceTimedBBChords :: [TimedData BBChord] -> [TimedData BBChord]
-reduceTimedBBChords = setChordIxsT . foldr groupT [] where
+-- 'Timed' type.
+reduceTimedBBChords :: [Timed BBChord] -> [Timed BBChord]
+reduceTimedBBChords = foldr groupT [] where
 
-   groupT :: TimedData BBChord -> [TimedData BBChord] -> [TimedData BBChord]
+   groupT :: Timed BBChord -> [Timed BBChord] -> [Timed BBChord]
    groupT c [] = [c]
-   groupT tc@(TimedData c _ ) (th@(TimedData h _ ) : t)
-     | c `bbChordEq` h = concatTimedData 
-                           (setDuration c (succ . duration $ chord h)) tc th : t
+   groupT tc@(Timed c _ ) (th@(Timed h _ ) : t)
+     | c `bbChordEq` h = concatTimed c tc th : t
      | otherwise       = tc : th : t
 
 -- | Similar to 'expandBBChords' the inverse of 'reduceTimedBBChords'
-expandTimedBBChords :: [TimedData BBChord] -> [TimedData BBChord]
-expandTimedBBChords = setChordIxsT . concatMap replic where
+expandTimedBBChords :: [Timed BBChord] -> [Timed BBChord]
+expandTimedBBChords = concatMap replic where
 
-  replic :: TimedData BBChord -> [TimedData BBChord]
-  replic (TimedData c ts) = 
-    let x  = setDuration c 1 
-    in  zipWith3 timedDataBT
-                 (x : repeat x { weight = Beat, annotations = []}) ts (tail ts)
+  replic :: Timed BBChord -> [Timed BBChord]
+  replic (Timed c ts) = 
+    let reps = repeat c { weight = Beat, annotations = [] }
+    in  zipWith3 timedBT (c : reps) ts (tail ts)
 
              
 -- keep groupBBChord and expandChordDur "inverseable" we use a more strict
--- 'BBChord' equallity  
+-- 'BBChord' equality  
 bbChordEq :: BBChord -> BBChord -> Bool
 bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) = 
   chordRoot cA      == chordRoot cB && 
@@ -315,19 +313,19 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
 --------------------------------------------------------------------------------
 
 -- | Shows the chord sequence in the 'BillboardData'
-showFullChord :: ([TimedData BBChord] -> [TimedData BBChord]) 
+showFullChord :: ([Timed BBChord] -> [Timed BBChord]) 
               -> BillboardData -> String
 showFullChord redf = concatMap (showLine (show . chord)) . redf . getSong 
 
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions
-showInMIREXFormat :: ([TimedData BBChord] -> [TimedData BBChord]) 
+showInMIREXFormat :: ([Timed BBChord] -> [Timed BBChord]) 
                   -> BillboardData -> String
 showInMIREXFormat redf = concatMap (showLine mirexBBChord) . redf . getSong 
 
--- | Shows a 'TimedData' 'BBChord' in MIREX triadic format, using only :maj, 
+-- | Shows a 'Timed' 'BBChord' in MIREX triadic format, using only :maj, 
 -- :min, :aug, :dim, sus2, sus4, and ignoring all chord additions 
-showLine ::  (BBChord -> String) -> TimedData BBChord ->  String
+showLine ::  (BBChord -> String) -> Timed BBChord ->  String
 showLine shwf c = show (onset c) ++ '\t' :  show (offset c) 
                                  ++ '\t' : (shwf . getData $ c) ++ "\n" 
                                
@@ -335,8 +333,8 @@ showLine shwf c = show (onset c) ++ '\t' :  show (offset c)
 mirexBBChord :: BBChord -> String
 mirexBBChord bbc = let x = chord bbc 
                    in case (chordRoot x, chordShorthand x) of
-                        ((Note _ N), None ) -> "N"
-                        ((Note _ X), _    ) -> "X"
+                        -- ((Note _ N), None ) -> "N"
+                        -- ((Note _ X), _    ) -> "X"
                         (r         , Sus2 ) -> show r ++ ":sus2"
                         (r         , Sus4 ) -> show r ++ ":sus4"
                         (r         , _    ) -> case toTriad x of
