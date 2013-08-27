@@ -288,11 +288,9 @@ expandTimedBBChords = concatMap replic where
 -- 'BBChord' equality  
 bbChordEq :: BBChord -> BBChord -> Bool
 bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) = 
-  chordRoot cA      == chordRoot cB && 
-  chordShorthand cA == chordShorthand cB && 
-  chordAdditions cA == chordAdditions cB &&
-  anA          `annEq` anB &&
-  btA         `beatEq` btB where
+  cA   ==      cB  &&    -- as of HarmTrace-Base-1.4 we have derive chord Eq
+  anA `annEq`  anB &&
+  btA `beatEq` btB where
   
     annEq :: [Annotation] -> [Annotation] -> Bool
     annEq [] [] = True
@@ -331,12 +329,21 @@ showLine shwf c = show (onset c) ++ '\t' :  show (offset c)
                                
 -- Categorises a chord as Major or Minor and shows it in Harte et al. syntax
 mirexBBChord :: BBChord -> String
-mirexBBChord bbc = let x = chord bbc 
-                   in case (chordRoot x, chordShorthand x) of
+mirexBBChord bbc = case chord bbc of
+                     NoChord    -> "N"
+                     UndefChord -> "X"
+                     c -> case toTriad c of
+                            NoTriad -> case chordShorthand c of
+                                         Sus2 -> show (chordRoot c) ++ ":sus2"
+                                         Sus4 -> show (chordRoot c) ++ ":sus4"
+                                         _    -> "X"
+                            t      ->            show (chordRoot c) ++':' : show t
+                            
+                   -- in case (chordRoot x, chordShorthand x) of
                         -- ((Note _ N), None ) -> "N"
                         -- ((Note _ X), _    ) -> "X"
-                        (r         , Sus2 ) -> show r ++ ":sus2"
-                        (r         , Sus4 ) -> show r ++ ":sus4"
-                        (r         , _    ) -> case toTriad x of
-                                                 NoTriad ->  "X"
-                                                 t   -> show r ++':' : show t
+                        -- (r         , Sus2 ) -> show r ++ ":sus2"
+                        -- (r         , Sus4 ) -> show r ++ ":sus4"
+                        -- (r         , _    ) -> case toTriad x of
+                                                 -- NoTriad ->  "X"
+                                                 -- t   -> show r ++':' : show t
