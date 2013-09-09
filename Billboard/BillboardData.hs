@@ -295,6 +295,7 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
   chordRoot cA      == chordRoot cB && 
   chordShorthand cA == chordShorthand cB && 
   chordAdditions cA == chordAdditions cB &&
+  chordBass cA      == chordBass cB &&
   anA          `annEq` anB &&
   btA         `beatEq` btB where
   
