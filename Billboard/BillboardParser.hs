@@ -30,7 +30,7 @@ import Text.ParserCombinators.UU
 import HarmTrace.Base.Parse.General  hiding ( pLineEnd )
 import HarmTrace.Base.Parse.ChordParser     ( pRoot, pChord )
 import HarmTrace.Base.Chord
-import HarmTrace.Base.MusicTime       ( Timed (..), timed
+import HarmTrace.Base.Time            ( Timed (..), timed
                                       , BarTime (..), onset, offset )
 
 import Billboard.BeatBar              ( TimeSig  (..), BeatWeight (..)

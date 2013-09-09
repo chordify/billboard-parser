@@ -22,17 +22,18 @@ module Billboard.Tests ( mainTestFile
                        , getOffBeats) where
 
 import Test.HUnit
-import Control.Monad (void)
+import Control.Monad             ( void )
 
-import Data.List (genericLength)
+import Data.List                 ( genericLength )
 
-import HarmTrace.Base.MusicTime (Timed, onset, offset, getData)
-import HarmTrace.Base.Chord     (Chord (..))
+import HarmTrace.Base.Time       ( Timed, onset, offset, getData)
+import HarmTrace.Base.Chord      ( Chord (..))
 
 import Billboard.BillboardParser ( parseBillboard)
-import Billboard.BillboardData ( BillboardData (..), BBChord (..), isNoneBBChord
-                               , reduceTimedBBChords, expandTimedBBChords
-                               ) -- , getBBChords )
+import Billboard.BillboardData   ( BillboardData (..), BBChord (..)
+                                 , isNoneBBChord
+                                 , reduceTimedBBChords, expandTimedBBChords
+                                 ) -- , getBBChords )
 import Billboard.IOUtils
 
 --------------------------------------------------------------------------------

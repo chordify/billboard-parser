@@ -52,7 +52,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
 
 -- HarmTrace stuff
 import HarmTrace.Base.Chord
-import HarmTrace.Base.MusicTime ( Timed (..), timedBT, getData
+import HarmTrace.Base.Time     ( Timed (..), timedBT, getData
                                 , onset, offset, concatTimed )
 
 import Billboard.BeatBar

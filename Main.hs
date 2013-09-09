@@ -27,7 +27,7 @@ import Billboard.Tests ( mainTestFile, mainTestDir, rangeTest
 import Billboard.IOUtils 
 
 -- harmtrace imports
-import HarmTrace.Base.MusicTime (Timed (..), dropTimed)
+import HarmTrace.Base.Time (Timed (..), dropTimed)
 
 -- other libraries
 import System.Console.ParseArgs
