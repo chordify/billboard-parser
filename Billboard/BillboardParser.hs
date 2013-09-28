@@ -24,7 +24,6 @@ module Billboard.BillboardParser ( pBillboard
 
 import Data.List                      ( genericLength, partition )
 import Control.Arrow                  ( first )
--- import Control.Monad.State
 import Text.ParserCombinators.UU
 
 import HarmTrace.Base.Parse.General  hiding ( pLineEnd )
@@ -312,8 +311,7 @@ interp = concatMap interpolate . fixBothBeatDev where
 -- The beat deviation occurs both at the beginning and at the end of piece,
 -- but the principle of correction is exactly the same (but mirrored). Hence
 -- 'fixForward' and 'fixBackward' both rely on 'fixOddLongBeats'
-fixForward, fixBackward, fixBothBeatDev :: [Timed [BBChord]] 
-                                        -> [Timed [BBChord]]
+fixForward, fixBackward, fixBothBeatDev :: [Timed [BBChord]] -> [Timed [BBChord]]
 fixBothBeatDev = fixBackward . fixForward
 fixForward     = fixOddLongBeats Forward 
                  acceptableBeatDeviationMultiplier
@@ -532,7 +530,7 @@ updateRep ts cs       = update cs                             -- multiple chords
           _      -> error "update: unexpected beat weight" -- cannot happen
 
 -- replicates an 'BBChord' the first chord will have a 'Change'
--- weigth and the remaining chords will have a 'Beat' weight
+-- weight and the remaining chords will have a 'Beat' weight
 replChord :: Int -> BBChord -> [BBChord]
 replChord d c = c : replicate (pred d) c {weight = Beat}
 

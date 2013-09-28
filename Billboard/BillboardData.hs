@@ -84,16 +84,7 @@ data Meta   = Metre   TimeSig
 data BBChord = BBChord { annotations :: [Annotation]
                        , weight      :: BeatWeight
                        , chord       :: Chord Root
-                       } 
-
-instance Show BBChord where 
-  show = show . chord
-  -- show (BBChord [] Beat  _c) = show Beat
-  -- show (BBChord bd Beat  _c) = show Beat ++ show bd
-  -- show (BBChord [] w      c) = show w ++ ' ' : show c -- ++ (show $ duration c)
-  -- show (BBChord bd w      c) = 
-    -- let (srt, end) = partition isStart bd
-    -- in  show w ++ concatMap show srt ++ ' ' : show c ++ ' ' : concatMap show end
+                       } deriving Show
 
 instance Ord BBChord where
   compare (BBChord _ _ a) (BBChord _ _ b)
@@ -313,7 +304,12 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
 -- | Shows the chord sequence in the 'BillboardData'
 showFullChord :: ([Timed BBChord] -> [Timed BBChord]) 
               -> BillboardData -> String
-showFullChord redf = concatMap (showLine (show . chord)) . redf . getSong 
+showFullChord redf = concatMap (showLine show) . redf . getSong 
+
+-- | Shows the chord sequence in the 'BillboardData'
+showLabChord :: ([Timed BBChord] -> [Timed BBChord]) 
+              -> BillboardData -> String
+showLabChord redf = concatMap (showLine (show . chord)) . redf . getSong 
 
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions
