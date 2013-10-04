@@ -306,7 +306,8 @@ interp = concatMap interpolate . fixBothBeatDev where
         off = offset td
         dat = getData td
         bt  = (off - on) / genericLength dat
-    in  zipWith3 timed dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
+        ts  = [on, (on + bt) .. ]
+    in  zipWith3 timed dat ts (tail ts)
 
 -- The beat deviation occurs both at the beginning and at the end of piece,
 -- but the principle of correction is exactly the same (but mirrored). Hence
