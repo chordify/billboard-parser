@@ -59,6 +59,8 @@ import Billboard.BeatBar
 import Billboard.Annotation     ( Annotation (..), isStart, isStruct
                                 , getLabel, Label, isEndAnno
                                 , isFirstChord, isLastChord )
+                                
+import Data.List                ( partition )
 
 -- | The 'BillboardData' datatype stores all information that has been extracted
 -- from a Billboard chord annotation
@@ -252,6 +254,22 @@ getStructAnn = filter ( isStruct . getLabel ) . annotations
     -- | c `bbChordEq` h  = setDuration c (succ . duration $ chord h): t
     -- | otherwise        = c : h : t
 
+-- | Similar to 'expandBBChords' the inverse of 'reduceTimedBBChords'
+expandTimedBBChords :: [Timed BBChord] -> [Timed BBChord]
+expandTimedBBChords = concatMap replic where
+
+  replic :: Timed BBChord -> [Timed BBChord]
+  replic (Timed c ts) = 
+    let (s,e) = partition isStart (annotations c)
+        reps = repeat c { weight = Beat, annotations = [] }
+        
+        -- places the end annotations at the end of the list
+        updateEnd :: [Timed BBChord] -> [Timed BBChord]
+        updateEnd [ ]           = [ ]
+        updateEnd [ Timed d x ] = [ Timed d { annotations = e } x ]
+        updateEnd (h : t)       = h : updateEnd t
+        
+    in  updateEnd $ zipWith3 timedBT (c { annotations = s } : reps) ts (tail ts)
 
 -- | Returns the reduced chord sequences, where repeated chords are merged
 -- into one 'BBChord', similar to 'reduceBBChords', but then wrapped in a 
@@ -262,19 +280,13 @@ reduceTimedBBChords = foldr groupT [] where
    groupT :: Timed BBChord -> [Timed BBChord] -> [Timed BBChord]
    groupT c [] = [c]
    groupT tc@(Timed c _ ) (th@(Timed h _ ) : t)
-     | c `bbChordEq` h = concatTimed c tc th : t
+     | c `bbChordEq` h = concatTimed (mergeChord c h) tc th : t
      | otherwise       = tc : th : t
+     
+   mergeChord :: BBChord -> BBChord -> BBChord
+   mergeChord a b = a { annotations = annotations a ++ annotations b }
 
--- | Similar to 'expandBBChords' the inverse of 'reduceTimedBBChords'
-expandTimedBBChords :: [Timed BBChord] -> [Timed BBChord]
-expandTimedBBChords = concatMap replic where
 
-  replic :: Timed BBChord -> [Timed BBChord]
-  replic (Timed c ts) = 
-    let reps = repeat c { weight = Beat, annotations = [] }
-    in  zipWith3 timedBT (c : reps) ts (tail ts)
-
-             
 -- keep groupBBChord and expandChordDur "inverseable" we use a more strict
 -- 'BBChord' equality  
 bbChordEq :: BBChord -> BBChord -> Bool
@@ -284,10 +296,16 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
   btA `beatEq` btB where
   
     annEq :: [Annotation] -> [Annotation] -> Bool
-    annEq [] [] = True
+    -- annEq [] [] = True
     annEq _  [] = True
-    annEq a  b  = a == b
-      
+    annEq _  e  = onlyEndAnns e
+    -- annEq a  b  = a == b
+    
+    -- returns True if the Annotations are only of the 'End' type or empty
+    onlyEndAnns :: [Annotation] -> Bool
+    onlyEndAnns []    = True
+    onlyEndAnns (h:t) = not (isStart h) && onlyEndAnns t
+    
     beatEq :: BeatWeight -> BeatWeight -> Bool  
     beatEq LineStart Beat       = True
     beatEq Bar       Beat       = True
@@ -296,7 +314,6 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
     beatEq Change    Change     = False
     beatEq LineStart LineStart  = False
     beatEq a         b          = a == b
-
 --------------------------------------------------------------------------------
 -- Printing chord sequences
 --------------------------------------------------------------------------------
