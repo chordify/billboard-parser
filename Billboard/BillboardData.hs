@@ -266,7 +266,7 @@ expandTimedBBChords = concatMap replic where
         -- places the end annotations at the end of the list
         updateEnd :: [Timed BBChord] -> [Timed BBChord]
         updateEnd [ ]           = [ ]
-        updateEnd [ Timed d x ] = [ Timed d { annotations = e } x ]
+        updateEnd [ Timed d x ] = [ Timed (mergeAnnos d e) x ]
         updateEnd (h : t)       = h : updateEnd t
         
     in  updateEnd $ zipWith3 timedBT (c { annotations = s } : reps) ts (tail ts)
@@ -280,11 +280,12 @@ reduceTimedBBChords = foldr groupT [] where
    groupT :: Timed BBChord -> [Timed BBChord] -> [Timed BBChord]
    groupT c [] = [c]
    groupT tc@(Timed c _ ) (th@(Timed h _ ) : t)
-     | c `bbChordEq` h = concatTimed (mergeChord c h) tc th : t
+     | c `bbChordEq` h = concatTimed (mergeAnnos c (annotations h)) tc th : t
      | otherwise       = tc : th : t
-     
-   mergeChord :: BBChord -> BBChord -> BBChord
-   mergeChord a b = a { annotations = annotations a ++ annotations b }
+   
+-- merges (or 'reduces') two chords into one.
+mergeAnnos :: BBChord -> [Annotation] -> BBChord
+mergeAnnos a b = a { annotations = annotations a ++  b }
 
 
 -- keep groupBBChord and expandChordDur "inverseable" we use a more strict
