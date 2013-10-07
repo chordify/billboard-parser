@@ -431,7 +431,7 @@ setAnnotations :: Double -> [Annotation] -> [BBChord] -> [Annotation]
                -> (Double, [BBChord])
 setAnnotations d _   [ ]    _   = (d, []) -- no chords, just a timestamp
 setAnnotations d srt chords end = 
-  (d, updateLast (addAnnotation end'') (addAnnotation srt' c : cs))
+  (d, updateLast (mergeAnnos end'') (mergeAnnos srt' c : cs))
 
   where -- put the 'starting annotations' at the beginning
         (srt', end') = first (++ srt) (partition isStart end)
@@ -440,18 +440,14 @@ setAnnotations d srt chords end =
         (c : cs, end'') = case partition isRepeat end' of
              -- in the case that we find a repetition we return an updated
              -- list of annotations (rep'') that does not contain the repetition
-             -- Afterall, it has been expanded and could only confuse users
+             -- After all, it has been expanded and could only confuse users
              ([r], nr) -> (concat $ replicate (getRepeats r) chords, nr)
              ([ ], _ ) -> (chords, end')
              _   -> error "Billboard.Billboardparser: multiple repeats found!" 
-  
-        -- replaces the list of annotations in a BBChord
-        addAnnotation :: [Annotation] -> BBChord -> BBChord
-        addAnnotation ans crd = crd {annotations = ans}
 
 -- Recognises the "Z" character, and several silence annotations. If silence 
 -- (see pSilence) is explicitly annotated the annotation is also stored in the
--- outputed N chord label.   
+-- outputted N chord label.   
 pZSilence :: Parser BBChord  
 pZSilence = endChord <$> 
       ((pString "Z" <* pPrimes) *> pMaybe (pString ", " *> pSilence)

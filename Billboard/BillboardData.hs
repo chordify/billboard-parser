@@ -31,9 +31,8 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , addEnd
                                , addLabel
                                , addStartEnd
-                               -- , getDuration
                                , getStructAnn
-                               -- , setChordIxsT
+                               , mergeAnnos
                                -- ** Tests
                                , isStructSegStart
                                , isNoneBBChord
@@ -61,7 +60,7 @@ import Billboard.Annotation     ( Annotation (..), isStart, isStruct
                                 , isFirstChord, isLastChord )
 import Billboard.Internal       ( updateLast )
 
-import Data.List                ( partition )
+import Data.List                ( partition, sort )
 
 -- | The 'BillboardData' datatype stores all information that has been extracted
 -- from a Billboard chord annotation
@@ -141,18 +140,22 @@ hasAnnotation :: (Annotation -> Bool) -> BBChord -> Bool
 hasAnnotation f c = case annotations c of
   [] -> False
   a  -> or . map f $ a
+  
+-- adds 'Annotation's to a 'BBChord' (and sorts the annotations)
+mergeAnnos :: [Annotation] -> BBChord -> BBChord
+mergeAnnos b a = a { annotations = sort (annotations a ++ b) }
 
 -- | Adds a starting point of an 'Annotation' 'Label' to a 'BBChord'
 addStart :: Label -> BBChord -> BBChord
-addStart lab chrd = chrd { annotations = Start lab : annotations chrd }
+addStart lab = mergeAnnos [Start lab]
 
 -- | Adds an end point of an 'Annotation' 'Label' to a 'BBChord'
 addEnd :: Label -> BBChord -> BBChord
-addEnd lab chrd = chrd { annotations = End lab : annotations chrd }
+addEnd lab = mergeAnnos [End lab]
 
 -- | Adds both a start and an end 'Annotation' 'Label' to a 'BBChord'
 addStartEnd :: Label -> BBChord -> BBChord
-addStartEnd lab c = c { annotations = Start lab : End lab : annotations c }
+addStartEnd lab = mergeAnnos [Start lab, End lab]
 
 -- | Annotates a sequence of 'BBChord's by adding a Start 'Label' 'Annotation'
 -- at the first chord and an End 'Label' 'Annotation' at the last chord. The
@@ -278,10 +281,6 @@ reduceTimedBBChords = foldr groupT [] where
    groupT tc@(Timed c _ ) (th@(Timed h _ ) : t)
      | c `bbChordEq` h = concatTimed ( mergeAnnos (annotations h) c ) tc th : t
      | otherwise       = tc : th : t
-   
--- merges (or 'reduces') two chords into one.
-mergeAnnos :: [Annotation] -> BBChord -> BBChord
-mergeAnnos b a = a { annotations = annotations a ++  b }
 
 
 -- keep groupBBChord and expandChordDur "inverseable" we use a more strict
