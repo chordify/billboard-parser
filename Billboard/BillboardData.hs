@@ -59,7 +59,8 @@ import Billboard.BeatBar
 import Billboard.Annotation     ( Annotation (..), isStart, isStruct
                                 , getLabel, Label, isEndAnno
                                 , isFirstChord, isLastChord )
-                                
+import Billboard.Internal       ( updateLast )
+
 import Data.List                ( partition )
 
 -- | The 'BillboardData' datatype stores all information that has been extracted
@@ -263,13 +264,8 @@ expandTimedBBChords = concatMap replic where
     let (s,e) = partition isStart (annotations c)
         reps = repeat c { weight = Beat, annotations = [] }
         
-        -- places the end annotations at the end of the list
-        updateEnd :: [Timed BBChord] -> [Timed BBChord]
-        updateEnd [ ]           = [ ]
-        updateEnd [ Timed d x ] = [ Timed (mergeAnnos d e) x ]
-        updateEnd (h : t)       = h : updateEnd t
-        
-    in  updateEnd $ zipWith3 timedBT (c { annotations = s } : reps) ts (tail ts)
+    in  updateLast (fmap (mergeAnnos e))
+      $ zipWith3 timedBT (c { annotations = s } : reps) ts (tail ts)
 
 -- | Returns the reduced chord sequences, where repeated chords are merged
 -- into one 'BBChord', similar to 'reduceBBChords', but then wrapped in a 
@@ -280,12 +276,12 @@ reduceTimedBBChords = foldr groupT [] where
    groupT :: Timed BBChord -> [Timed BBChord] -> [Timed BBChord]
    groupT c [] = [c]
    groupT tc@(Timed c _ ) (th@(Timed h _ ) : t)
-     | c `bbChordEq` h = concatTimed (mergeAnnos c (annotations h)) tc th : t
+     | c `bbChordEq` h = concatTimed ( mergeAnnos (annotations h) c ) tc th : t
      | otherwise       = tc : th : t
    
 -- merges (or 'reduces') two chords into one.
-mergeAnnos :: BBChord -> [Annotation] -> BBChord
-mergeAnnos a b = a { annotations = annotations a ++  b }
+mergeAnnos :: [Annotation] -> BBChord -> BBChord
+mergeAnnos b a = a { annotations = annotations a ++  b }
 
 
 -- keep groupBBChord and expandChordDur "inverseable" we use a more strict

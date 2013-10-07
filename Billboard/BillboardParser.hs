@@ -38,6 +38,7 @@ import Billboard.BillboardData
 import Billboard.Annotation           (  Annotation (..), Label (..)
                                       , Instrument (..), Description (..)
                                       , isStart, isRepeat, getRepeats )
+import Billboard.Internal             ( updateLast )
 
 --------------------------------------------------------------------------------
 -- Constants
@@ -447,12 +448,6 @@ setAnnotations d srt chords end =
         -- replaces the list of annotations in a BBChord
         addAnnotation :: [Annotation] -> BBChord -> BBChord
         addAnnotation ans crd = crd {annotations = ans}
-        
-        -- applies a function to the last element of a list
-        updateLast :: (a -> a) -> [a] -> [a]
-        updateLast _ [ ]    = []
-        updateLast f [x]    = [f x]
-        updateLast f (x:xs) = x : updateLast f xs
 
 -- Recognises the "Z" character, and several silence annotations. If silence 
 -- (see pSilence) is explicitly annotated the annotation is also stored in the

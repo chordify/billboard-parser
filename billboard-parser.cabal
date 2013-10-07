@@ -44,6 +44,7 @@ library
                        Billboard.IOUtils
                        
   other-modules:       Billboard.Tests
+                       Billboard.Internal
   
   ghc-options:         -Wall
                        -O2 
