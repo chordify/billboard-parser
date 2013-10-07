@@ -29,7 +29,7 @@ import Text.ParserCombinators.UU
 import HarmTrace.Base.Parse.General  hiding ( pLineEnd )
 import HarmTrace.Base.Parse.ChordParser     ( pRoot, pChord )
 import HarmTrace.Base.Chord
-import HarmTrace.Base.Time            ( Timed (..), timed
+import HarmTrace.Base.Time            ( Timed (..), timed, timeComp
                                       , BeatTime (..), onset, offset )
 
 import Billboard.BeatBar              ( TimeSig  (..), BeatWeight (..)
@@ -63,9 +63,19 @@ parseBillboard = parseDataWithErrors pBillboard
 pBillboard :: Parser BillboardData
 pBillboard = do (a, t, ts, r) <- pHeader
                 c             <- pChordLinesPost ts
-                return (BillboardData a t ts r c) where
+                return (BillboardData a t ts r (removeRoundErr c)) where
 
-             
+  removeRoundErr :: [Timed a] -> [Timed a]
+  removeRoundErr = foldr step [] 
+
+  step :: Timed a -> [Timed a] -> [Timed a]
+  step x []    = [x]
+  step x (h:t) = case timeComp (onset x) (offset h) of
+                   EQ -> x : h : t
+                   -- in case of a rounding error, due to interpolation,
+                   -- we replace the offset by the onset of then next chord
+                   _  -> timed (getData x) (onset x) (onset h) : h : t
+  
 --------------------------------------------------------------------------------
 -- parsing meta data in the headers
 --------------------------------------------------------------------------------
