@@ -156,30 +156,6 @@ addLabel lab (c:cs)  = addStart lab c : foldr step [] cs where
   step x [] = [addEnd lab x] -- add a label to the last element of the list
   step x xs = x : xs
 
--- | Sets the indexes of a list of 'Timed' 'BBChord's (starting at 0)
--- setChordIxsT :: [Timed BBChord] -> [Timed BBChord]
--- setChordIxsT cs = zipWith (fmap . flip setChordIx) [0..] cs   
-  
--- -- | Sets the indexes of a list of 'BBChords' (starting at 0)
--- setChordIxs :: [BBChord] -> [BBChord]
--- setChordIxs cs = zipWith setChordIx cs [0..]
-  
--- -- sets the index of a 'BBChord' (should not be exported)
--- setChordIx :: BBChord -> Int -> BBChord 
--- setChordIx rc i = let x = chord rc in rc {chord = x {getLoc = i} }
-
--- | Returns the duration of the chord (the unit of the duration can be 
--- application dependent, but will generally be measured in eighth notes)
--- If the data comes directly from the parser the duration will be 1 for
--- all 'BBChord's. However, if it has been \reduced\ with 'reduceBBChords'
--- the duration will be the number of consecutive tatum units.
--- getDuration :: BBChord -> Int
--- getDuration = duration . chord
-
--- sets the duration of an 'BBChord'
--- setDuration :: BBChord -> Int -> BBChord
--- setDuration c i = let x = chord c in c { chord = x { duration = i } }
-  
 -- | Strips the time stamps from BillBoardData and concatenates all 'BBChords'
 getBBChords :: BillboardData -> [BBChord]
 getBBChords = map getData . getSong
@@ -212,41 +188,8 @@ getStructAnn = filter ( isStruct . getLabel ) . annotations
 -- Utilities
 --------------------------------------------------------------------------------
 
--- | Given a list of 'BBChord's that have a certain duration (i.e. the number of 
--- beats that the chord should sound), every 'BBChord' is replaced by /x/ 
--- 'BBChord's with the same properties, but whit a duration of 1 beat, where /x/ 
--- is the duration of the original 'BBChord'
--- expandBBChords :: [BBChord] -> [BBChord]
--- expandBBChords = setChordIxs . concatMap replic where
-  -- replic c = let x = setDuration c 1 
-             -- in  x : replicate (pred . duration $ chord c) 
-                               -- x { weight = Beat, annotations = []}
-                               
--- | The inverse function of 'expandChordDur': given a list of 'BBChords' that 
--- all have a duration of 1 beat, all subsequent /x/ 'BBChords' with the same 
--- label are grouped into one 'BBChord' with durations /x/. N.B. 
---
--- >>> expandBBChords (reduceBBChords cs) = cs
--- 
--- also,
---
--- >>> (expandBBChords cs) = cs
---
--- and,
---
--- >>> reduceBBChords (reduceBBChords cs) = (reduceBBChords cs)
---
--- hold. This has been tested on the first tranche of 649 Billboard songs
--- reduceBBChords :: [BBChord] -> [BBChord]
--- reduceBBChords = setChordIxs . foldr group []  where
-  
-  -- group :: BBChord -> [BBChord] -> [BBChord]
-  -- group c [] = [c]
-  -- group c (h:t)
-    -- | c `bbChordEq` h  = setDuration c (succ . duration $ chord h): t
-    -- | otherwise        = c : h : t
-
--- | Similar to 'expandBBChords' the inverse of 'reduceTimedBBChords'
+-- | the inverse of 'reduceTimedBBChords', expanding a chord to it original 
+-- representation
 expandTimedBBChords :: [Timed BBChord] -> [Timed BBChord]
 expandTimedBBChords = concatMap replic where
 
@@ -258,9 +201,21 @@ expandTimedBBChords = concatMap replic where
     in  updateLast (fmap (mergeAnnos e))
       $ zipWith3 timedBT (c { annotations = s } : reps) ts (tail ts)
 
--- | Returns the reduced chord sequences, where repeated chords are merged
--- into one 'BBChord', similar to 'reduceBBChords', but then wrapped in a 
--- 'Timed' type.
+-- | The inverse function of 'expandTimedBBChords': given a list of 
+-- 'Timed BBChords', all subsequent /x/ 'BBChords' with the same 
+-- label are grouped into one 'Timed BBChord'. N.B. 
+--
+-- >>> expandTimedBBChords (reduceTimedBBChords cs) = cs :: [Timed BBChord]
+-- 
+-- also,
+--
+-- >>> (expandTimedBBChords cs) = cs
+--
+-- and,
+--
+-- >>> reduceTimedBBChords (reduceTimedBBChords cs) = (reduceTimedBBChords cs)
+--
+-- hold. This has been tested on the first tranche of 649 Billboard songs.
 reduceTimedBBChords :: [Timed BBChord] -> [Timed BBChord]
 reduceTimedBBChords = foldr groupT [] where
 
