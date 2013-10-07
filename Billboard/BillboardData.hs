@@ -260,12 +260,7 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
 -- | Shows the chord sequence in the 'BillboardData'
 showFullChord :: ([Timed BBChord] -> [Timed BBChord]) 
               -> BillboardData -> String
-showFullChord redf = concatMap (showLine show) . redf . getSong 
-
--- | Shows the chord sequence in the 'BillboardData'
-showLabChord :: ([Timed BBChord] -> [Timed BBChord]) 
-              -> BillboardData -> String
-showLabChord redf = concatMap (showLine (show . chord)) . redf . getSong 
+showFullChord redf = concatMap (showLine (show . chord)) . redf . getSong 
 
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions
