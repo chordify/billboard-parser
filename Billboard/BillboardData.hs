@@ -86,19 +86,7 @@ data Meta   = Metre   TimeSig
 data BBChord = BBChord { annotations :: [Annotation]
                        , weight      :: BeatWeight
                        , chord       :: Chord Root
-                       } deriving Show
-
-instance Ord BBChord where
-  compare (BBChord _ _ a) (BBChord _ _ b)
-    | rt == EQ = compare (toTriad a) (toTriad b) -- N.B.toTriad can be expensive
-    | otherwise  = rt where
-        rt = compare (chordRoot a) (chordRoot b)
-
--- TODO replace by derived EQ, use a specific EQ where needed.
-instance Eq BBChord where
-  (BBChord _ _ a) == (BBChord _ _ b) = chordRoot a == chordRoot b && 
-                                       toTriad   a == toTriad   b
-
+                       } deriving (Eq, Ord, Show)
 
 --------------------------------------------------------------------------------
 -- Some BBChord Utilities
