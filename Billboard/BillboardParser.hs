@@ -272,6 +272,8 @@ pInstrument =   Guitar         <$ pString "guitar"
             <|> Woodwinds      <$ pString "woodwinds"
             <|> Choir          <$ pString "choir"
             <|> Crowd          <$ pString "crowd"
+            <|> Glockenspiel   <$ pString "glockenspiel"
+            <|> Harp           <$ pString "harp"
 
 pUnknownInstr :: Parser Instrument
 pUnknownInstr = UnknownInstr <$> pList1 pLower
