@@ -155,7 +155,7 @@ pAnnotation =   Chorus         <$ pString "chorus"<* pMabSpcDsh <* pMaybe pLower
             <|> Fadein         <$ pString "fade" <* pMabSpc <* pString "in" 
             <|> Solo           <$ pString "solo" 
             <|> Prechorus      <$ pString "pre"<* pMabSpcDsh 
-                    <* pString "chorus" <* pMaybe pTextNr
+                    <* pString "chorus" <* pMabSpc <* pMaybe pTextNr
             <|> Maintheme      <$ pMaybe (pString "main" <* pMabSpcDsh) <* pString "theme"
             <|> Keychange      <$ pString "key"<* pMabSpcDsh <* pString "change"
             <|> Secondarytheme <$ pOptWrapPar "secondary" <* pMabSpcDsh <* pString "theme"
