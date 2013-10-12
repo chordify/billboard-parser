@@ -178,7 +178,7 @@ parseFile cf fp = do inp <- readFile fp
 
 -- parses a directory of Billboard songs
 parseDir :: FilePath -> IO ()
-parseDir d = void . bbdir oneSliceSalami $ d where
+parseDir d = void . bbMap oneSliceSalami $ d where
     -- parses a billboard file and presents the user with condensed output
     -- If parsing errors are encountered, they are printed
     oneSliceSalami :: FilePath -> IO ([Timed BBChord])
