@@ -24,21 +24,15 @@ import Data.List (nub, intercalate)
 import Data.Binary (encodeFile)
 import Text.Printf (printf)
 
--- import ChordTrack.Audio.Viterbi
--- import ChordTrack.Audio.VectorNumerics hiding (sum) 
+import ChordTrack.Audio.Viterbi
+import ChordTrack.Audio.VectorNumerics hiding (sum, disp) 
 
 type Transitions = M.Map (ChordLabel, ChordLabel) Int
 type InitCount   = M.Map ChordLabel Int
 
-allRoots :: [Root]
--- To keep things simple, we generate a lot of notes, and then simplify them
-allRoots = nub . map simplifyRoot $
-           [ Note m r | m <- [Nothing, Just Sh, Just Fl]
-                      , r <- [C,D,E,F,G,A,B] ]
-
 allChords :: [ChordLabel]
-allChords = shortChord (Note Nothing N) None :
-          [ shortChord r sh | sh <- [Maj,Min], r <- allRoots ]
+allChords = NoChord 
+          : [ shortChord (pcToRoot r) sh | sh <- [Maj,Min], r <- [0 .. 12] ]
 
 emptyTransitions :: Transitions
 emptyTransitions = M.fromList 
@@ -46,19 +40,13 @@ emptyTransitions = M.fromList
                    
 -- Get the chords, throw away the rest
 stripData :: BillboardData -> [ChordLabel]
-stripData = filter isGood . map (simplify . chord . getData)
-                          . reduceTimedBBChords . getSong where
-                          
-  simplify :: ChordLabel -> ChordLabel
-  simplify c = toMajMinChord c { chordRoot = simplifyRoot (chordRoot c)
-                               , chordAdditions = []
-                               , getLoc = 0, duration = 1 }
+stripData = map (toMajMinChord . chord . getData) . getSong where
   
-  isGood :: ChordLabel -> Bool
-  isGood (Chord (Note _ N) None _ _ _) = True
-  isGood (Chord (Note _ X) _    _ _ _) = False
-  isGood (Chord _          None _ _ _) = False -- for chords without a triad
-  isGood _                             = True
+  -- isGood :: ChordLabel -> Bool
+  -- isGood (Chord (Note _ N) None _ _ _) = True
+  -- isGood (Chord (Note _ X) _    _ _ _) = False
+  -- isGood (Chord _          None _ _ _) = False -- for chords without a triad
+  -- isGood _                             = True
 
 -- Process all files in the dir
 statsAll :: FilePath -> IO Transitions
@@ -77,18 +65,15 @@ statsAll fp = do files <- getBBFiles fp
     statsOne = doChords . stripData
     
     doChords :: [ChordLabel] -> Transitions
-    doChords (c1:c2:r) = M.insertWith (+) (c1,c2) 1 (doChords (c2:r))
-    doChords _         = ts
+    doChords (_c:UndefChord:t) = doChords t
+    doChords (c1:c2:r)         = M.insertWith (+) (c1,c2) 1 (doChords (c2:r))
+    doChords _                 = ts
 
 
-instance (Ord a) => Ord (Chord a) where
-  compare a b = compare (chordShorthand a) (chordShorthand b) `mappend` 
-                compare (chordRoot a) (chordRoot b)
+-- instance (Ord a) => Ord (Chord a) where
+  -- compare a b = compare (chordShorthand a) (chordShorthand b) `mappend` 
+                -- compare (chordRoot a) (chordRoot b)
 
--- Creates a simple chord based on a root and shorthand 
--- TODO: move to harmtrace-base?
-shortChord :: Root -> Shorthand -> ChordLabel
-shortChord r sh = Chord r sh [] 0 1
 
 -- Pretty-print the transition matrix
 {-
