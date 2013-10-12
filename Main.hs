@@ -55,7 +55,8 @@ myArgs = [
                  argAbbr  = Just 'm',
                  argName  = Just "mode",
                  argData  = argDataRequired "mode" ArgtypeString,
-                 argDesc  = "The operation mode (parse|mirex|test|full|result|debug)"
+                 argDesc  = 
+                   breakLn 53 "The billboard-parser features five modes ( parse | mirex | test | full | result | debug): With the first mode, parse, one or more pieces are parsed, and the piece is printed to the user in a way that resembles the original. If a piece cannot be parsed correctly, the parser will inform the user which part of the input could not be parsed, and where this occurred exactly in the file. The second mode, mirex, converts billboard pieces into the format typically used in MIREX evaluations: onset <space> offset <space> chordlabel. In MIREX mode, the chord labels are also truncated to the triad shorthands maj, min, dim, aug, sus2, and sus4; all additional chord extensions are removed. We truncate a chord by expanding it to its corresponding list of intervals, and analyse the components, if any, that are a second, third, fourth, or fifth above the root. The third mode, full, uses the same format as the mirex mode, but it prints the full chordlabel as found in the data. The fourth mode, test, executes a series of unit tests that flag chords with an unexpected duration. The mode result will output the results described in the technical report of this parser. Finally, debug, is verbose mode for debugging the parser."
                }
         ,  Arg { argIndex = OutDir,
                  argAbbr  = Just 'o',
@@ -93,6 +94,17 @@ myArgs = [
                }
          ]
 
+-- breaks a long string into lines wh
+breakLn :: Int -> String -> String         
+breakLn l = intercalate ('\n' : replicate (79-l) ' ')
+          . map (intercalate " ") . foldr step [] . words where
+
+  step :: String -> [[String]] -> [[String]]
+  step w []    = [[w]]
+  step w (h:t) | (sum $ map (succ . length) h) + (length w) <= l = (w  : h) : t
+               | otherwise                                       = [w] : h : t
+
+         
 -- representing the mode of operation
 data Mode = Mirex | Parse | Test | Full | Result | Debug deriving (Eq)
 
@@ -168,7 +180,7 @@ parseFile cf fp = do inp <- readFile fp
 -- parses a directory of Billboard songs
 parseDir :: FilePath -> IO ()
 parseDir d = void . bbdir oneSliceSalami $ d where
-    -- parses a billboard file and presents the user with condenced output
+    -- parses a billboard file and presents the user with condensed output
     -- If parsing errors are encountered, they are printed
     oneSliceSalami :: FilePath -> IO ([Timed BBChord])
     oneSliceSalami f = 
