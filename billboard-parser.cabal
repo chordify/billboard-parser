@@ -48,7 +48,8 @@ library
                        Billboard.Internal
   
   ghc-options:         -Wall
-                       -O2 
+                       -O2
+                       -rtsopts
                        
 executable transitions
   main-is:             Billboard\Transitions.hs
@@ -65,3 +66,4 @@ executable transitions
   
   ghc-options:         -Wall
                        -O2 
+                       -rtsopts

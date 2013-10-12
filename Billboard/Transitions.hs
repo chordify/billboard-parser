@@ -6,7 +6,7 @@ module Main ( main ) where
 
 import Prelude 
 
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import HarmTrace.Base.Time       (Timed, getData)
 import HarmTrace.Base.Chord
 
@@ -41,17 +41,11 @@ stripData = map (discardBass . toMajMinChord . chord . getData) . getSong
 
 -- Process all files in the dir
 statsAll :: FilePath -> IO Transitions
-statsAll fp = do files <- getBBFiles fp
-                 ts    <- foldM doFiles emptyTransitions files
-                 
-                 -- uncomment to show probability instead of counts
-                 -- let nrTs = M.foldr (+) 0 ts
-                 -- return $ M.map (/ nrTs) ts where
-                 return ts where
+statsAll fp = bbFold doFiles emptyTransitions fp where
   
-  doFiles :: Transitions -> (FilePath, Int) -> IO Transitions
-  doFiles ts (d,_) = do putStrLn d
-                        readFile d >>= return . statsOne . fst . parseBillboard 
+  doFiles :: Transitions -> FilePath -> IO Transitions
+  doFiles ts d = do putStrLn d
+                    readFile d >>= return . statsOne . fst . parseBillboard 
     where
       statsOne :: BillboardData -> Transitions
       statsOne = doChords . stripData
