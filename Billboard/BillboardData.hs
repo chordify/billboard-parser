@@ -45,6 +45,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                -- * Showing
                                , showInMIREXFormat
                                , showFullChord
+                               , showDebugChord
                                , showAsOriginal
                                ) where
 
@@ -256,15 +257,17 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
 -- Printing chord sequences
 --------------------------------------------------------------------------------
 
+-- | Shows the data (almost) as derived automatically
+showDebugChord ::([Timed BBChord] -> [Timed BBChord]) -> BillboardData -> String
+showDebugChord redf = concatMap (showLine show) . redf . getSong 
+
 -- | Shows the chord sequence in the 'BillboardData'
-showFullChord :: ([Timed BBChord] -> [Timed BBChord]) 
-              -> BillboardData -> String
+showFullChord :: ([Timed BBChord] -> [Timed BBChord]) -> BillboardData -> String
 showFullChord redf = concatMap (showLine (show . chord)) . redf . getSong 
 
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions
-showInMIREXFormat :: ([Timed BBChord] -> [Timed BBChord]) 
-                  -> BillboardData -> String
+showInMIREXFormat ::([Timed BBChord]->[Timed BBChord])-> BillboardData -> String
 showInMIREXFormat redf = concatMap (showLine mirexBBChord) . redf . getSong 
 
 -- | Shows a 'Timed' 'BBChord' in MIREX triadic format, using only :maj, 
@@ -272,11 +275,12 @@ showInMIREXFormat redf = concatMap (showLine mirexBBChord) . redf . getSong
 showLine ::  (BBChord -> String) -> Timed BBChord ->  String
 showLine shwf c = show (onset c) ++ '\t' :  show (offset c) 
                                  ++ '\t' : (shwf . getData $ c) ++ "\n" 
-                     
+
+-- | Shows a 'BBChord' in a way that resembles the original Billboard data
 showAsOriginal :: BBChord -> String
 showAsOriginal (BBChord [] Beat  _c) = show Beat
 showAsOriginal (BBChord bd Beat  _c) = show Beat ++ show bd
-showAsOriginal (BBChord [] w      c) = show w ++ ' ' : show c -- ++ (show $ duration c)
+showAsOriginal (BBChord [] w      c) = show w ++ ' ' : show c 
 showAsOriginal (BBChord bd w      c) = let (srt, end) = partition isStart bd
                                        in  show w ++ concatMap show srt 
                                                   ++ ' ' : show c 

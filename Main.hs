@@ -18,7 +18,7 @@
 
 module Main (main) where
 
-import Billboard.BillboardData    ( BBChord (..), showAsOriginal
+import Billboard.BillboardData    ( BBChord (..), showAsOriginal, showDebugChord
                                   , reduceTimedBBChords, BillboardData(..)
                                   , showFullChord, showInMIREXFormat, getTitle)
 import Billboard.BillboardParser  ( parseBillboard )
@@ -55,7 +55,7 @@ myArgs = [
                  argAbbr  = Just 'm',
                  argName  = Just "mode",
                  argData  = argDataRequired "mode" ArgtypeString,
-                 argDesc  = "The operation mode (parse|mirex|test|full)"
+                 argDesc  = "The operation mode (parse|mirex|test|full|result|debug)"
                }
         ,  Arg { argIndex = OutDir,
                  argAbbr  = Just 'o',
@@ -94,7 +94,7 @@ myArgs = [
          ]
 
 -- representing the mode of operation
-data Mode = Mirex | Parse | Test | Full | Result deriving (Eq)
+data Mode = Mirex | Parse | Test | Full | Result | Debug deriving (Eq)
 
 -- Run from CL
 main :: IO ()
@@ -105,6 +105,7 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
                          "mirex"  -> Mirex
                          "parse"  -> Parse
                          "test"   -> Test
+                         "debug"  -> Debug
                          "result" -> Result
                          m        -> usageError arg ("unrecognised mode: " ++ m)
               -- get filepaths           
@@ -131,10 +132,12 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
           
           -- do the parsing magic
           case (mode, input) of
-            (Full, Left  f) -> showFile (showFullChord compf) f
-            (Full, Right d) -> void $ writeDir (showFullChord compf) mout d
+            (Full, Left  f)   -> showFile (showFullChord compf) f
+            (Full, Right d)   -> void $ writeDir (showFullChord compf) mout d
             (Mirex,  Left  f) -> showFile (showInMIREXFormat compf) f
             (Mirex,  Right d) -> void $ writeDir (showInMIREXFormat compf) mout d
+            (Debug,  Left  f) -> showFile (showDebugChord compf) f
+            (Debug,  Right d) -> void $ writeDir (showDebugChord compf) mout d
             (Parse,  Left  f) -> parseFile compf f
             (Parse,  Right d) -> parseDir d
             (Test ,  Left  f) -> mainTestFile rangeTest f
