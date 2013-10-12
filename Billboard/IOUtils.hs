@@ -12,17 +12,21 @@
 -- Summary: A set Billboard specific file and directory utilities
 --------------------------------------------------------------------------------
 
-module Billboard.IOUtils (bbdir, getBBFiles, getBBFile) where
+module Billboard.IOUtils (bbMap, bbFold, getBBFiles, getBBFile) where
 
 import System.Directory
 import System.FilePath
-import Text.Printf (printf)
-import Control.Monad (filterM)
+import Text.Printf       ( printf )
+import Control.Monad     ( filterM, foldM )
 
 -- | Applies a function to all files in a directory
-bbdir :: (FilePath -> IO a) ->  FilePath -> IO [a]
-bbdir f fp =   getDirectoryContents fp >>= filterM isBillboardDir 
+bbMap :: (FilePath -> IO a) ->  FilePath -> IO [a]
+bbMap f fp =   getDirectoryContents fp >>= filterM isBillboardDir 
            >>= mapM (\d -> f (fp </> d </> "salami_chords.txt")) 
+           
+bbFold :: (a -> FilePath -> IO a) -> a -> FilePath -> IO a
+bbFold f a fp =   getDirectoryContents fp >>= filterM isBillboardDir 
+              >>= foldM (\x d -> f x (fp </> d </> "salami_chords.txt")) a
 
 -- | Given the path to the Billboard collection, returns a list with the
 -- filepaths and id's of the salami_chords.txt files. (The id is the parent
