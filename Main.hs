@@ -2,14 +2,14 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Main
--- Copyright   :  (c) 2012 Universiteit Utrecht
--- License     :  GPL3
+-- Copyright   :  (c) 2012 - 2013, Universiteit Utrecht
+-- License     :  LGPL3
 --
 -- Maintainer  :  W. Bas de Haas <bash@cs.uu.nl>
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
--- Summary: The Commandline interface for parsing Billboard data. See:
+-- Summary: The Command line interface for parsing Billboard data. See:
 -- John Ashley Burgoyne, Jonathan Wild, Ichiro Fujinaga, 
 -- /An Expert Ground-Truth Set for Audio Chord Recognition and Music Analysis/,
 -- In: Proceedings of International Conference on Music Information Retrieval,
@@ -18,23 +18,23 @@
 
 module Main (main) where
 
-import Billboard.BillboardData ( BBChord (..)
-                               , reduceTimedBBChords, BillboardData(..)
-                               , showFullChord, showInMIREXFormat, getTitle)
-import Billboard.BillboardParser ( parseBillboard )
-import Billboard.Tests ( mainTestFile, mainTestDir, rangeTest
-                       , oddBeatLengthTest, getOffBeats) 
+import Billboard.BillboardData    ( BBChord (..), showAsOriginal
+                                  , reduceTimedBBChords, BillboardData(..)
+                                  , showFullChord, showInMIREXFormat, getTitle)
+import Billboard.BillboardParser  ( parseBillboard )
+import Billboard.Tests            ( mainTestFile, mainTestDir, rangeTest
+                                  , oddBeatLengthTest, getOffBeats) 
 import Billboard.IOUtils 
 
 -- harmtrace imports
-import HarmTrace.Base.Time (Timed (..), dropTimed)
+import HarmTrace.Base.Time        ( Timed (..), dropTimed )
 
 -- other libraries
 import System.Console.ParseArgs
 import System.FilePath
-import Control.Monad (when, void)
-import Text.Printf (printf)
-import Data.List (genericLength, intercalate)
+import Control.Monad              ( when, void )
+import Text.Printf                ( printf )
+import Data.List                  ( genericLength, intercalate )
 
 --------------------------------------------------------------------------------
 -- Contants
@@ -44,7 +44,7 @@ outputFileName :: FilePath
 outputFileName = "mirex_chords" <.> "txt"
 
 --------------------------------------------------------------------------------
--- Commandline argument parsing
+-- Command line argument parsing
 --------------------------------------------------------------------------------
 data ReppatArgs = InputFilepath | InputDirFilepath | InputID | ModeArg | OutDir
                 | Compression deriving (Eq, Ord, Show)
@@ -157,8 +157,10 @@ parseFile cf fp = do inp <- readFile fp
   printBillboard :: BillboardData -> IO()
   printBillboard bd = 
     do putStrLn (getArtist bd ++ ": " ++ getTitle bd)
-       putStr . concatMap (\x -> ' ' : show x) . dropTimed . cf . getSong $ bd
+       putStr . concatMap (\x -> ' ' : showAsOriginal x) 
+              . dropTimed . cf . getSong $ bd
        putStr " |\n\n" 
+
 
 -- parses a directory of Billboard songs
 parseDir :: FilePath -> IO ()

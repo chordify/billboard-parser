@@ -40,13 +40,12 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                , hasAnnotations
                                , isEnd
                                -- ** Chord reduction
-                               -- , reduceBBChords
-                               -- , expandBBChords
                                , reduceTimedBBChords
                                , expandTimedBBChords
                                -- * Showing
                                , showInMIREXFormat
                                , showFullChord
+                               , showAsOriginal
                                ) where
 
 -- HarmTrace stuff
@@ -273,7 +272,16 @@ showInMIREXFormat redf = concatMap (showLine mirexBBChord) . redf . getSong
 showLine ::  (BBChord -> String) -> Timed BBChord ->  String
 showLine shwf c = show (onset c) ++ '\t' :  show (offset c) 
                                  ++ '\t' : (shwf . getData $ c) ++ "\n" 
-                               
+                     
+showAsOriginal :: BBChord -> String
+showAsOriginal (BBChord [] Beat  _c) = show Beat
+showAsOriginal (BBChord bd Beat  _c) = show Beat ++ show bd
+showAsOriginal (BBChord [] w      c) = show w ++ ' ' : show c -- ++ (show $ duration c)
+showAsOriginal (BBChord bd w      c) = let (srt, end) = partition isStart bd
+                                       in  show w ++ concatMap show srt 
+                                                  ++ ' ' : show c 
+                                                  ++ ' ' : concatMap show end
+                     
 -- Categorises a chord as Major or Minor and shows it in Harte et al. syntax
 mirexBBChord :: BBChord -> String
 mirexBBChord bbc = case chord bbc of
@@ -285,12 +293,3 @@ mirexBBChord bbc = case chord bbc of
                                          Sus4 -> show (chordRoot c) ++ ":sus4"
                                          _    -> "X"
                             t      ->            show (chordRoot c) ++':' : show t
-                            
-                   -- in case (chordRoot x, chordShorthand x) of
-                        -- ((Note _ N), None ) -> "N"
-                        -- ((Note _ X), _    ) -> "X"
-                        -- (r         , Sus2 ) -> show r ++ ":sus2"
-                        -- (r         , Sus4 ) -> show r ++ ":sus4"
-                        -- (r         , _    ) -> case toTriad x of
-                                                 -- NoTriad ->  "X"
-                                                 -- t   -> show r ++':' : show t
