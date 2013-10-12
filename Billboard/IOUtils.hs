@@ -36,7 +36,7 @@ getBBFiles p =   getDirectoryContents p >>= filterM isBillboardDir
 isBillboardDir :: String -> IO Bool
 isBillboardDir x = case length x of
   4 -> do let n = read x :: Int -- x should be a folder 0 - 1000
-          return (n >= 0 && n <= 1000)
+          return (n >= 0 && n <= 2000)
   _ -> return False
 
 -- | Given a base directory pointing to the billboard location and a billboard
