@@ -7,22 +7,19 @@ module Main ( main ) where
 import Prelude 
 
 import qualified Data.Map as M
--- import qualified Data.Vector as V ( fromList, map)
--- import Data.Vector                ( Vector )
-
-import HarmTrace.Base.Time (Timed, getData)
+import HarmTrace.Base.Time       (Timed, getData)
 import HarmTrace.Base.Chord
 
 import Billboard.BillboardParser ( parseBillboard)
-import Billboard.BillboardData ( BillboardData (..), BBChord (..), reduceTimedBBChords )
+import Billboard.BillboardData   ( BillboardData (..), BBChord (..) )
 import Billboard.IOUtils
 
-import System.Environment (getArgs)
-import Control.Monad (foldM)
-import Data.Monoid (mappend)
-import Data.List (nub, intercalate)
-import Data.Binary (encodeFile)
-import Text.Printf (printf)
+import System.Environment        ( getArgs )
+import Control.Monad             ( foldM )
+import Data.Monoid               ( mappend )
+import Data.List                 ( intercalate )
+import Data.Binary               ( encodeFile )
+import Text.Printf               ( printf )
 
 import ChordTrack.Audio.Viterbi
 import ChordTrack.Audio.VectorNumerics hiding (sum, disp) 
@@ -32,7 +29,7 @@ type InitCount   = M.Map ChordLabel Int
 
 allChords :: [ChordLabel]
 allChords = NoChord 
-          : [ shortChord (pcToRoot r) sh | sh <- [Maj,Min], r <- [0 .. 12] ]
+          : [ shortChord (pcToRoot r) sh | sh <- [Maj,Min], r <- [0 .. 11] ]
 
 emptyTransitions :: Transitions
 emptyTransitions = M.fromList 
@@ -40,13 +37,7 @@ emptyTransitions = M.fromList
                    
 -- Get the chords, throw away the rest
 stripData :: BillboardData -> [ChordLabel]
-stripData = map (toMajMinChord . chord . getData) . getSong where
-  
-  -- isGood :: ChordLabel -> Bool
-  -- isGood (Chord (Note _ N) None _ _ _) = True
-  -- isGood (Chord (Note _ X) _    _ _ _) = False
-  -- isGood (Chord _          None _ _ _) = False -- for chords without a triad
-  -- isGood _                             = True
+stripData = map (discardBass . toMajMinChord . chord . getData) . getSong
 
 -- Process all files in the dir
 statsAll :: FilePath -> IO Transitions
@@ -59,37 +50,17 @@ statsAll fp = do files <- getBBFiles fp
                  return ts where
   
   doFiles :: Transitions -> (FilePath, Int) -> IO Transitions
-  doFiles ts (d,_) = readFile d >>= return . statsOne . fst . parseBillboard where
-    
-    statsOne :: BillboardData -> Transitions
-    statsOne = doChords . stripData
-    
-    doChords :: [ChordLabel] -> Transitions
-    doChords (_c:UndefChord:t) = doChords t
-    doChords (c1:c2:r)         = M.insertWith (+) (c1,c2) 1 (doChords (c2:r))
-    doChords _                 = ts
+  doFiles ts (d,_) = do putStrLn d
+                        readFile d >>= return . statsOne . fst . parseBillboard 
+    where
+      statsOne :: BillboardData -> Transitions
+      statsOne = doChords . stripData
+      
+      doChords :: [ChordLabel] -> Transitions
+      doChords (_c:UndefChord:t) = doChords t
+      doChords (c1:c2:r)         = M.insertWith (+) (c1,c2) 1 (doChords (c2:r))
+      doChords _                 = ts
 
-
--- instance (Ord a) => Ord (Chord a) where
-  -- compare a b = compare (chordShorthand a) (chordShorthand b) `mappend` 
-                -- compare (chordRoot a) (chordRoot b)
-
-
--- Pretty-print the transition matrix
-{-
-printTransitions :: Transitions -> String
-printTransitions ts = "\t" ++ 
-                      intercalate "\t" [ show c1 | ((c1, c2), _) <- M.toAscList ts
-                                                , c1 == c2 ] 
-                      ++ "\n" ++ concat
-                      [ show c1 ++ "\t"
-                        ++ intercalate "\t"
-                           [ show p
-                           | ((c1', _c2'), p) <- M.toAscList ts, c1 == c1' ] ++ "\n"
-                      | ((c1, c2), _) <- M.toAscList ts, c1 == c2 ]          
- -}
- 
- 
 --------------------------------------------------------------------------------
 -- Initial probabilities
 --------------------------------------------------------------------------------
@@ -163,8 +134,7 @@ main = do (path:_) <- getArgs
           initp <- readInitCounts states path
           putStrLn ("States: " ++ show states)
           putStrLn ("Initial Probabilities: " ++ show initp)
-          putStrLn . disp (printf "\t%.2f") $ trns
-          -- putStrLn . dispf $ trns
+          putStrLn . disp (printf "\t%.4f") $ trns
           -- ( [State ChordLabel], [Prob], [[Prob]] )
           encodeFile "transitions.bin" 
              (states, initp, trns)
