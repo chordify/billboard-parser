@@ -24,14 +24,13 @@ module Billboard.BillboardParser ( pBillboard
 
 import Data.List                      ( genericLength, partition )
 import Control.Arrow                  ( first )
--- import Control.Monad.State
 import Text.ParserCombinators.UU
 
 import HarmTrace.Base.Parse.General  hiding ( pLineEnd )
 import HarmTrace.Base.Parse.ChordParser     ( pRoot, pChord )
 import HarmTrace.Base.Chord
-import HarmTrace.Base.MusicTime       ( Timed (..), timed
-                                      , BarTime (..), onset, offset )
+import HarmTrace.Base.Time            ( Timed (..), timed, timeComp
+                                      , BeatTime (..), onset, offset )
 
 import Billboard.BeatBar              ( TimeSig  (..), BeatWeight (..)
                                       , tatumsPerBar, chordsPerDot )
@@ -39,6 +38,7 @@ import Billboard.BillboardData
 import Billboard.Annotation           (  Annotation (..), Label (..)
                                       , Instrument (..), Description (..)
                                       , isStart, isRepeat, getRepeats )
+import Billboard.Internal             ( updateLast )
 
 --------------------------------------------------------------------------------
 -- Constants
@@ -63,9 +63,19 @@ parseBillboard = parseDataWithErrors pBillboard
 pBillboard :: Parser BillboardData
 pBillboard = do (a, t, ts, r) <- pHeader
                 c             <- pChordLinesPost ts
-                return (BillboardData a t ts r c) where
+                return (BillboardData a t ts r (removeRoundErr c)) where
 
-             
+  removeRoundErr :: [Timed a] -> [Timed a]
+  removeRoundErr = foldr step [] 
+
+  step :: Timed a -> [Timed a] -> [Timed a]
+  step x []    = [x]
+  step x (h:t) = case timeComp (onset x) (offset h) of
+                   EQ -> x : h : t
+                   -- in case of a rounding error, due to interpolation,
+                   -- we replace the offset by the onset of then next chord
+                   _  -> timed (getData x) (onset x) (onset h) : h : t
+  
 --------------------------------------------------------------------------------
 -- parsing meta data in the headers
 --------------------------------------------------------------------------------
@@ -145,7 +155,7 @@ pAnnotation =   Chorus         <$ pString "chorus"<* pMabSpcDsh <* pMaybe pLower
             <|> Fadein         <$ pString "fade" <* pMabSpc <* pString "in" 
             <|> Solo           <$ pString "solo" 
             <|> Prechorus      <$ pString "pre"<* pMabSpcDsh 
-                    <* pString "chorus" <* pMaybe pTextNr
+                    <* pString "chorus" <* pMabSpc <* pMaybe pTextNr
             <|> Maintheme      <$ pMaybe (pString "main" <* pMabSpcDsh) <* pString "theme"
             <|> Keychange      <$ pString "key"<* pMabSpcDsh <* pString "change"
             <|> Secondarytheme <$ pOptWrapPar "secondary" <* pMabSpcDsh <* pString "theme"
@@ -262,6 +272,8 @@ pInstrument =   Guitar         <$ pString "guitar"
             <|> Woodwinds      <$ pString "woodwinds"
             <|> Choir          <$ pString "choir"
             <|> Crowd          <$ pString "crowd"
+            <|> Glockenspiel   <$ pString "glockenspiel"
+            <|> Harp           <$ pString "harp"
 
 pUnknownInstr :: Parser Instrument
 pUnknownInstr = UnknownInstr <$> pList1 pLower
@@ -307,13 +319,13 @@ interp = concatMap interpolate . fixBothBeatDev where
         off = offset td
         dat = getData td
         bt  = (off - on) / genericLength dat
-    in  zipWith3 timed dat [on, (on+bt) ..] [(on+bt), (on+bt+bt) ..]
+        ts  = [on, (on + bt) .. ]
+    in  zipWith3 timed dat ts (tail ts)
 
 -- The beat deviation occurs both at the beginning and at the end of piece,
 -- but the principle of correction is exactly the same (but mirrored). Hence
 -- 'fixForward' and 'fixBackward' both rely on 'fixOddLongBeats'
-fixForward, fixBackward, fixBothBeatDev :: [Timed [BBChord]] 
-                                        -> [Timed [BBChord]]
+fixForward, fixBackward, fixBothBeatDev :: [Timed [BBChord]] -> [Timed [BBChord]]
 fixBothBeatDev = fixBackward . fixForward
 fixForward     = fixOddLongBeats Forward 
                  acceptableBeatDeviationMultiplier
@@ -431,7 +443,7 @@ setAnnotations :: Double -> [Annotation] -> [BBChord] -> [Annotation]
                -> (Double, [BBChord])
 setAnnotations d _   [ ]    _   = (d, []) -- no chords, just a timestamp
 setAnnotations d srt chords end = 
-  (d, updateLast (addAnnotation end'') (addAnnotation srt' c : cs))
+  (d, updateLast (mergeAnnos end'') (mergeAnnos srt' c : cs))
 
   where -- put the 'starting annotations' at the beginning
         (srt', end') = first (++ srt) (partition isStart end)
@@ -440,24 +452,14 @@ setAnnotations d srt chords end =
         (c : cs, end'') = case partition isRepeat end' of
              -- in the case that we find a repetition we return an updated
              -- list of annotations (rep'') that does not contain the repetition
-             -- Afterall, it has been expanded and could only confuse users
+             -- After all, it has been expanded and could only confuse users
              ([r], nr) -> (concat $ replicate (getRepeats r) chords, nr)
              ([ ], _ ) -> (chords, end')
              _   -> error "Billboard.Billboardparser: multiple repeats found!" 
-  
-        -- replaces the list of annotations in a BBChord
-        addAnnotation :: [Annotation] -> BBChord -> BBChord
-        addAnnotation ans crd = crd {annotations = ans}
-        
-        -- applies a function to the last element of a list
-        updateLast :: (a -> a) -> [a] -> [a]
-        updateLast _ [ ]    = []
-        updateLast f [x]    = [f x]
-        updateLast f (x:xs) = x : updateLast f xs
 
 -- Recognises the "Z" character, and several silence annotations. If silence 
 -- (see pSilence) is explicitly annotated the annotation is also stored in the
--- outputed N chord label.   
+-- outputted N chord label.   
 pZSilence :: Parser BBChord  
 pZSilence = endChord <$> 
       ((pString "Z" <* pPrimes) *> pMaybe (pString ", " *> pSilence)
@@ -532,7 +534,7 @@ updateRep ts cs       = update cs                             -- multiple chords
           _      -> error "update: unexpected beat weight" -- cannot happen
 
 -- replicates an 'BBChord' the first chord will have a 'Change'
--- weigth and the remaining chords will have a 'Beat' weight
+-- weight and the remaining chords will have a 'Beat' weight
 replChord :: Int -> BBChord -> [BBChord]
 replChord d c = c : replicate (pred d) c {weight = Beat}
 

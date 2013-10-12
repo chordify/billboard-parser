@@ -36,7 +36,7 @@ import HarmTrace.Base.Chord (Root)
 
 -- | an 'Annotation' occurs either at the start or at the end of a chord 
 -- sequence line.
-data Annotation = Start Label | End Label  deriving Eq
+data Annotation = Start Label | End Label  deriving (Eq, Ord)
 
 instance Show Annotation where
   show (Start l) = '<' : show l  
@@ -47,7 +47,7 @@ data Label = Struct     Char Int   -- ^ denoting A .. Z and the nr of primes (')
            | Instr      Instrument 
            | Anno       Description
            | Modulation Root 
-       deriving Eq
+       deriving (Eq, Ord) 
 
 instance Show Label where
   show (Instr      lab) = show lab
@@ -65,9 +65,10 @@ data Instrument = Guitar | Voice | Violin   | Banjo | Synthesizer | Saxophone
                 | Bassguitar     | Strings  | SteelDrum   | Vibraphone | Bongos
                 | Steelguitar    | Horn     | Sitar | Barisaxophone | Accordion
                 | Tambourine     | Kazoo  | Woodwinds   | Choir | Spoken | Crowd
+                | Glockenspiel | Harp
                 | UnknownInstr String -- ^ a catch all description for 
                                       -- unrecognised instruments
-       deriving (Show, Eq)
+       deriving (Show, Eq, Ord)
        
 -- | Representing typical structural segementation labels
 data Description = Chorus  | Intro | Outro | Bridge  | Interlude | Solo
@@ -83,7 +84,7 @@ data Description = Chorus  | Intro | Outro | Bridge  | Interlude | Solo
                  -- | a catch all description for unrecognised descriptions
                  | UnknownAnno String 
 
-       deriving (Show, Eq)
+       deriving (Show, Eq, Ord)
 
 
 --------------------------------------------------------------------------------

@@ -10,8 +10,8 @@ import qualified Data.Map as M
 -- import qualified Data.Vector as V ( fromList, map)
 -- import Data.Vector                ( Vector )
 
-import HarmTrace.Base.MusicTime (TimedData, getData)
-import HarmTrace.Base.MusicRep
+import HarmTrace.Base.Time (Timed, getData)
+import HarmTrace.Base.Chord
 
 import Billboard.BillboardParser ( parseBillboard)
 import Billboard.BillboardData ( BillboardData (..), BBChord (..), reduceTimedBBChords )
@@ -24,7 +24,7 @@ import Data.List (nub, intercalate)
 import Data.Binary (encodeFile)
 import Text.Printf (printf)
 
-import ChordTrack.Audio.Viterbi
+-- import ChordTrack.Audio.Viterbi
 -- import ChordTrack.Audio.VectorNumerics hiding (sum) 
 
 type Transitions = M.Map (ChordLabel, ChordLabel) Int

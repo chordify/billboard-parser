@@ -22,17 +22,17 @@ module Billboard.Tests ( mainTestFile
                        , getOffBeats) where
 
 import Test.HUnit
-import Control.Monad (void)
+import Control.Monad             ( void )
 
-import Data.List (genericLength)
+import Data.List                 ( genericLength )
 
-import HarmTrace.Base.MusicTime (Timed, onset, offset, getData)
-import HarmTrace.Base.Chord     (Chord (..))
+import HarmTrace.Base.Time       ( Timed, onset, offset, getData)
 
 import Billboard.BillboardParser ( parseBillboard)
-import Billboard.BillboardData ( BillboardData (..), BBChord (..), isNoneBBChord
-                               , reduceTimedBBChords, expandTimedBBChords
-                               ) -- , getBBChords )
+import Billboard.BillboardData   ( BillboardData (..), BBChord (..)
+                                 , isNoneBBChord
+                                 , reduceTimedBBChords, expandTimedBBChords
+                                 ) -- , getBBChords )
 import Billboard.IOUtils
 
 --------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ reduceTest (bbd, i) =
   let cs = getSong bbd
   in TestCase 
        (assertBool ("reduce mismatch for id " ++ show i)
-       (and $ zipWith (\a b -> getData a `bbChordEq` getData b) 
+       (and $ zipWith (\a b -> getData a == getData b) 
                       (expandTimedBBChords . reduceTimedBBChords $ cs) cs))
 
 -- | Tests whether: ('expandBBChords' . 'reduceBBChords' $ cs) == cs
@@ -134,15 +134,7 @@ reduceTestVerb bbd =
   cTest :: (Timed BBChord, Timed BBChord) -> Test 
   cTest (a,b) = TestCase 
     (assertBool ("non-maching chords: " ++ show a ++ " and " ++ show b)
-    (getData a `bbChordEq` getData b))
-
--- compares to 'BBChord's, thoroughly 
-bbChordEq :: BBChord -> BBChord -> Bool
-bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
-  anA == anB && btA == btB && 
-  chordRoot cA      == chordRoot cB && 
-  chordShorthand cA == chordShorthand cB && 
-  chordAdditions cA == chordAdditions cB   
+    (getData a == getData b)) -- N.B. we derive Eq
   
 getOffBeats :: Double -> [Timed BBChord] -> [Timed BBChord]
 getOffBeats th song = let (_avg, mn, mx) = getMinMaxBeatLen' th song
