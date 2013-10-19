@@ -16,13 +16,11 @@ import Billboard.IOUtils
 
 import System.Environment        ( getArgs )
 import Control.Monad             ( foldM )
-import Data.Monoid               ( mappend )
 import Data.List                 ( intercalate )
 import Data.Binary               ( encodeFile )
 import Text.Printf               ( printf )
 
 import ChordTrack.Audio.Viterbi
-import ChordTrack.Audio.VectorNumerics hiding (sum, disp) 
 
 type Transitions = M.Map (ChordLabel, ChordLabel) Int
 type InitCount   = M.Map ChordLabel Int
@@ -37,7 +35,8 @@ emptyTransitions = M.fromList
                    
 -- Get the chords, throw away the rest
 stripData :: BillboardData -> [ChordLabel]
-stripData = map (discardBass . toMajMinChord . chord . getData) . getSong
+stripData = map ( ignorePitchSpelling . discardBass 
+                . toMajMinChord . chord . getData) . getSong
 
 -- Process all files in the dir
 statsAll :: FilePath -> IO Transitions
@@ -51,6 +50,7 @@ statsAll fp = bbFold doFiles emptyTransitions fp where
       statsOne = doChords . stripData
       
       doChords :: [ChordLabel] -> Transitions
+      doChords (   UndefChord:t) = doChords t
       doChords (_c:UndefChord:t) = doChords t
       doChords (c1:c2:r)         = M.insertWith (+) (c1,c2) 1 (doChords (c2:r))
       doChords _                 = ts
@@ -105,7 +105,7 @@ initViterbiTrans sts trns = map rowProb chrds  where
 --------------------------------------------------------------------------------
 
 replZero :: Prob -> Prob
-replZero 0.0 = 1.0e-10
+replZero 0.0 = 1.0e-32
 replZero p   = p
   
 -- | Displaying a matrix
@@ -123,6 +123,7 @@ main = do (path:_) <- getArgs
           ts    <- statsAll path
           putStrLn ("Chords: " ++ show allChords)
           print ts
+          putStrLn ("SizeL " ++ show (M.size ts))
           let states = initViterbiStates allChords
               trns   = initViterbiTrans states ts
           initp <- readInitCounts states path
