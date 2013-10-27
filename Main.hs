@@ -47,7 +47,7 @@ outputFileName = "mirex_chords" <.> "txt"
 -- Command line argument parsing
 --------------------------------------------------------------------------------
 data ReppatArgs = InputFilepath | InputDirFilepath | InputID | ModeArg | OutDir
-                | Compression deriving (Eq, Ord, Show)
+                | Compression   | OutFileName deriving (Eq, Ord, Show)
 
 myArgs :: [Arg ReppatArgs]
 myArgs = [
@@ -91,6 +91,12 @@ myArgs = [
                             ++ "\n                          and \"red(uce)\" "
                             ++ "for compressed output" )
                }
+         , Arg { argIndex = OutFileName,
+                 argAbbr  = Just 'n',
+                 argName  = Just "name",
+                 argData  = argDataOptional "filepath" ArgtypeString,
+                 argDesc  = breakLn 53"An fprint string specifying the filename, the default filename string is \"%.4d_audio.lab\""
+               }
          ]
 
 -- fixes the indentation of the manual 
@@ -124,6 +130,7 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
               inDir  = getArg arg InputDirFilepath
               bbid   = getArg arg InputID
               mout   = getArg arg OutDir
+              oStr   = getArg arg OutFileName
               compf  = case getArg arg Compression of
                         (Just "exp")    -> id
                         (Just "expand") -> id
@@ -144,11 +151,11 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
           -- do the parsing magic
           case (mode, input) of
             (Full, Left  f)   -> showFile (showFullChord compf) f
-            (Full, Right d)   -> void $ writeDir (showFullChord compf) mout d
+            (Full, Right d)   -> void $ writeDir (showFullChord compf) oStr mout d
             (Mirex,  Left  f) -> showFile (showInMIREXFormat compf) f
-            (Mirex,  Right d) -> void $ writeDir (showInMIREXFormat compf) mout d
+            (Mirex,  Right d) -> void $ writeDir (showInMIREXFormat compf) oStr mout d
             (Debug,  Left  f) -> showFile (showDebugChord compf) f
-            (Debug,  Right d) -> void $ writeDir (showDebugChord compf) mout d
+            (Debug,  Right d) -> void $ writeDir (showDebugChord compf) oStr mout d
             (Parse,  Left  f) -> parseFile compf f
             (Parse,  Right d) -> parseDir d
             (Test ,  Left  f) -> mainTestFile rangeTest f
@@ -202,9 +209,9 @@ showFile shwf f = readFile f >>= putStrLn . shwf . fst . parseBillboard
 
 -- Reads a directory an writes a file with the chords, in a format defined
 -- by a specific show function, in the folder containing also the original file
-writeDir :: (BillboardData -> String) -> Maybe FilePath -> FilePath 
-         -> IO [String]
-writeDir shwf mfp d = getBBFiles d >>= mapM toMirex where
+writeDir :: (BillboardData -> String) -> Maybe String -> Maybe FilePath 
+         -> FilePath -> IO [String]
+writeDir shwf name mfp d = getBBFiles d >>= mapM toMirex where
 
   -- read, parses, and writes one mirex chord file
   toMirex :: (FilePath, Int) -> IO (String)
@@ -216,7 +223,8 @@ writeDir shwf mfp d = getBBFiles d >>= mapM toMirex where
                           -- place the file next to the input file (but rename)
                           Nothing -> dropFileName f </> outputFileName
                           -- place the output file in a specific folder (if set)
-                          Just fp -> fp </>  printf "%.4d" i ++ "_audio.lab"
+                          Just fp -> let str = maybe "%.4d_audio.lab" id name 
+                                     in  fp </>  printf str i
        when (not $ null err) (error ("there were errors in file: " ++ f))
        writeFile out s
        putStrLn ("written file: " ++ out)
