@@ -12,10 +12,10 @@
 -- Portability :  non-portable
 --
 -- Summary: A set of combinator parsers that parse Billboard data. See:
--- John Ashley Burgoyne, Jonathan Wild, Ichiro Fujinaga, 
+-- John Ashley Burgoyne, Jonathan Wild, Ichiro Fujinaga,
 -- /An Expert Ground-Truth Set for Audio Chord Recognition and Music Analysis/,
 -- In: Proceedings of International Conference on Music Information Retrieval,
--- 2011. (<http://ismir2011.ismir.net/papers/OS8-1.pdf>) 
+-- 2011. (<http://ismir2011.ismir.net/papers/OS8-1.pdf>)
 --------------------------------------------------------------------------------
 
 module Billboard.BillboardParser ( pBillboard
@@ -29,12 +29,12 @@ import Text.ParserCombinators.UU
 import HarmTrace.Base.Parse.General  hiding ( pLineEnd )
 import HarmTrace.Base.Parse.ChordParser     ( pRoot, pChord )
 import HarmTrace.Base.Chord
-import HarmTrace.Base.Time            ( Timed (..), timed, timeComp
+import HarmTrace.Base.Time            ( Timed (..), timed, timeComp, NumData
                                       , BeatTime (..), onset, offset )
 
 import Billboard.BeatBar              ( TimeSig  (..), BeatWeight (..)
                                       , tatumsPerBar, chordsPerDot )
-import Billboard.BillboardData 
+import Billboard.BillboardData
 import Billboard.Annotation           (  Annotation (..), Label (..)
                                       , Instrument (..), Description (..)
                                       , isStart, isRepeat, getRepeats )
@@ -46,7 +46,7 @@ import Billboard.Internal             ( updateLast )
 
 -- | A parameter that sets the acceptable beat deviation multiplier, which
 -- controls when exceptionally long beat lengths will be interpolated.
-acceptableBeatDeviationMultiplier :: Double
+acceptableBeatDeviationMultiplier :: NumData
 acceptableBeatDeviationMultiplier = 0.075
 
 --------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ pBillboard = do (a, t, ts, r) <- pHeader
                 return (BillboardData a t ts r (removeRoundErr c)) where
 
   removeRoundErr :: [Timed a] -> [Timed a]
-  removeRoundErr = foldr step [] 
+  removeRoundErr = foldr step []
 
   step :: Timed a -> [Timed a] -> [Timed a]
   step x []    = [x]
@@ -75,7 +75,7 @@ pBillboard = do (a, t, ts, r) <- pHeader
                    -- in case of a rounding error, due to interpolation,
                    -- we replace the offset by the onset of then next chord
                    _  -> timed (getData x) (onset x) (onset h) : h : t
-  
+
 --------------------------------------------------------------------------------
 -- parsing meta data in the headers
 --------------------------------------------------------------------------------
@@ -86,16 +86,16 @@ pHeader = sortMetas <$> (pMetaPrefix *> pTitle  ) <* pLineEnd <*>
                         (pMetaPrefix *> pArtist ) <* pLineEnd <*>
                         (pMetaPrefix *> pMeta   ) <* pLineEnd <*>
                         (pMetaPrefix *> pMeta   ) <* pLineEnd <*  pLineEnd where
-                        
+
   sortMetas :: Title -> Artist -> Meta -> Meta -> (Title, Artist, TimeSig, Root)
   sortMetas t a (Metre  ts) (KeyRoot r) = (t, a, ts, r)
   sortMetas t a (KeyRoot r) (Metre  ts) = (t, a, ts, r)
-  sortMetas _ _ _ _ = 
+  sortMetas _ _ _ _ =
     error "pBillboard (sortMetas): no valid metre and tonic found"
 
 pMetaPrefix :: Parser Char
-pMetaPrefix = pSym '#' <* pSym ' '  
-                    
+pMetaPrefix = pSym '#' <* pSym ' '
+
 pTitle   :: Parser Title
 pTitle   = id <$> (pString "title: "  *> pReadableStr)
 
@@ -111,7 +111,7 @@ pMetre   = Metre   <$> (pString "metre: "  *> pTimeSig    )
 pKeyRoot :: Parser Meta
 pKeyRoot = KeyRoot <$> (pString "tonic: "  *> pRoot       )
 
--- parses a time signature                    
+-- parses a time signature
 pTimeSig :: Parser TimeSig
 pTimeSig = TimeSig <$> (tuple <$> pIntegerRaw <*> (pSym '/' *> pIntegerRaw))
 
@@ -121,7 +121,7 @@ pTimeSig = TimeSig <$> (tuple <$> pIntegerRaw <*> (pSym '/' *> pIntegerRaw))
 
 pStructStart :: Parser [Annotation]
 pStructStart = pList (pStrucLab <|> pStrucDescStart)
-               
+
 -- structural annotations, e.g. A, B, C, etc..
 pStrucLab :: Parser Annotation
 pStrucLab = Start <$> (Struct <$> pUpper <*> pPrimes) <* pString ", "
@@ -130,14 +130,14 @@ pStrucLab = Start <$> (Struct <$> pUpper <*> pPrimes) <* pString ", "
 pPrimes :: Parser Int
 pPrimes = length <$> pMany (pSym '\'')
 
--- parses structural descriptions (strings before a ',' ) before the 
+-- parses structural descriptions (strings before a ',' ) before the
 -- chord sequences
 pStrucDescStart :: Parser Annotation
 pStrucDescStart =  (Start . Anno) <$> pAnno <* pString ", "
 
 -- parses a known or an unknown annotation
 pAnno :: Parser Description
-pAnno = pAnnotation <<|> pUnknownAnno 
+pAnno = pAnnotation <<|> pUnknownAnno
 
 -- the annotations known to this parser
 pAnnotation :: Parser Description
@@ -145,16 +145,16 @@ pAnnotation =   Chorus         <$ pString "chorus"<* pMabSpcDsh <* pMaybe pLower
             <|> Verse          <$> (pString "verse" *> pMabSpc *> pMaybe pTextNr)
             <|> PreVerse       <$ pString "pre" <* pMabSpcDsh <* pString "verse"
             <|> Vocal          <$ pString "vocal"
-            <|> Intro          <$ pMaybe (pString "pre") <* pMabSpcDsh 
+            <|> Intro          <$ pMaybe (pString "pre") <* pMabSpcDsh
                     <* pString "intro" <* pMabSpcDsh <* pMaybe pLower
             <|> Outro          <$ pString "outro"
             <|> Bridge         <$ pString "bridge"
-            <|> Interlude      <$ pString "interlude" 
+            <|> Interlude      <$ pString "interlude"
             <|> Transition     <$ pString "trans"<* pMaybe (pString "ition" )
-            <|> Fadeout        <$ pString "fade" <* pMabSpc <* pString "out" 
-            <|> Fadein         <$ pString "fade" <* pMabSpc <* pString "in" 
-            <|> Solo           <$ pString "solo" 
-            <|> Prechorus      <$ pString "pre"<* pMabSpcDsh 
+            <|> Fadeout        <$ pString "fade" <* pMabSpc <* pString "out"
+            <|> Fadein         <$ pString "fade" <* pMabSpc <* pString "in"
+            <|> Solo           <$ pString "solo"
+            <|> Prechorus      <$ pString "pre"<* pMabSpcDsh
                     <* pString "chorus" <* pMabSpc <* pMaybe pTextNr
             <|> Maintheme      <$ pMaybe (pString "main" <* pMabSpcDsh) <* pString "theme"
             <|> Keychange      <$ pString "key"<* pMabSpcDsh <* pString "change"
@@ -181,10 +181,10 @@ pUnknownAnno = UnknownAnno <$> pList1 pLower
 
 -- parses after the chords sequence description
 pEndAnnotations :: Parser [Annotation]
-pEndAnnotations = (++) <$> pRepeat <*> ((++) <$> pPhrase <*> pEndAnno) 
+pEndAnnotations = (++) <$> pRepeat <*> ((++) <$> pPhrase <*> pEndAnno)
 
 pEndAnno :: Parser [Annotation]
-pEndAnno = concat <$> pList (pString ", " *>  
+pEndAnno = concat <$> pList (pString ", " *>
                             (pPhrase <|> pLeadInstr <|> pStrucDescEnd))
 -- parses phrase annotations
 pPhrase :: Parser [Annotation]
@@ -198,7 +198,7 @@ pRepeat = (list . End . Anno . Repeat) <$> (pString " x" *> pIntegerRaw) `opt` [
 pStrucDescEnd :: Parser [Annotation]
 pStrucDescEnd = (list . End . Anno) <$> pAnno
 
--- parses a three different kind of lead insturment descriptions: 
+-- parses a three different kind of lead insturment descriptions:
 -- a start, an end, and a start and ending boundary
 pLeadInstr :: Parser [Annotation]
 pLeadInstr = pLeadInstrStart <|> pLeadInstrEnd <|> pLeadInstrStartEnd
@@ -213,26 +213,26 @@ pLeadInstrEnd = (list . End . Instr) <$> pInstr  <* pSym ')'
 
 -- start and end of a lead instrument description
 pLeadInstrStartEnd :: Parser [Annotation]
-pLeadInstrStartEnd = f <$> (pSym '(' *> pInstr <* pSym ')') 
+pLeadInstrStartEnd = f <$> (pSym '(' *> pInstr <* pSym ')')
   where f a = [Start $ Instr a, End $ Instr a]
 
 pInstr :: Parser Instrument
 pInstr = pInstrument <<|> pUnknownInstr
-  
+
 -- parses the different kind of lead instruments
 pInstrument :: Parser Instrument
 pInstrument =   Guitar         <$ pString "guitar"
-            <|> Voice          <$ (pString "vo" 
+            <|> Voice          <$ (pString "vo"
                                    <* (pString "ice"    <|>  pString "cal"))
             <|> Spoken         <$ (pString "spoken" <|> pString "rap")
-            <|> Violin         <$ (pString "fiddle" <|>  
+            <|> Violin         <$ (pString "fiddle" <|>
                                   (pString "violin" <* pMaybe (pSym 's')))
             <|> Banjo          <$ pString "banjo"
-            <|> Synthesizer    <$ pString "synth" <* pMaybe (pString "esi" 
+            <|> Synthesizer    <$ pString "synth" <* pMaybe (pString "esi"
                                <*(pSym 's' <|> pSym 'z' ) <* pString "er")
             <|> Saxophone      <$ pString "saxophone"
             <|> Flute          <$ pString "flute"
-            <|> Drums          <$ pString "drum" <* pMaybe (pString " kit" 
+            <|> Drums          <$ pString "drum" <* pMaybe (pString " kit"
                                                         <|> pString "s")
             <|> SteelDrum      <$ pString "steel " <*  (pString "drum"
                                <|>  pString "pan") <* pMaybe (pSym 's')
@@ -279,15 +279,15 @@ pUnknownInstr :: Parser Instrument
 pUnknownInstr = UnknownInstr <$> pList1 pLower
 
 -- a parser that recognises either a metre change or a modulation
-pMetaChange :: Parser  (Either (Double, [BBChord]) Meta)
+pMetaChange :: Parser  (Either (NumData, [BBChord]) Meta)
 pMetaChange = pModulation <|> pMetreChange
 
 -- recongises a modulation and returns the new tonic
-pModulation :: Parser (Either (Double, [BBChord]) Meta)
+pModulation :: Parser (Either (NumData, [BBChord]) Meta)
 pModulation = Right <$> (pMetaPrefix *> pKeyRoot)
 
 -- recongises a metre change and returns the new time signature
-pMetreChange :: Parser (Either (Double, [BBChord]) Meta)
+pMetreChange :: Parser (Either (NumData, [BBChord]) Meta)
 pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 
 --------------------------------------------------------------------------------
@@ -296,25 +296,25 @@ pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 
 -- Top-level parser for parsing chords sequence lines an annotations
 pChordLinesPost :: TimeSig -> Parser [Timed BBChord]
-pChordLinesPost ts = (interp . setTiming) <$> pChordLines ts 
+pChordLinesPost ts = (interp . setTiming) <$> pChordLines ts
 
 -- labels every line with the corresponding starting and ending times (where
 -- the end time is actually the start time of the next chord line)
-setTiming :: [(Double, a)] -> [Timed a]
+setTiming :: [(NumData, a)] -> [Timed a]
 setTiming [ ] = []
-setTiming [_] = [] -- remove the end 
-setTiming (a : b : cs) = Timed (snd a) [Time (fst a), Time (fst b)] 
+setTiming [_] = [] -- remove the end
+setTiming (a : b : cs) = Timed (snd a) [Time (fst a), Time (fst b)]
                          : setTiming (b:cs)
 
--- interpolates the on- and offset for every 'BBChord' in a timestamped list  
--- of 'BBChord's 
+-- interpolates the on- and offset for every 'BBChord' in a timestamped list
+-- of 'BBChord's
 interp :: [Timed [BBChord]] -> [Timed BBChord]
 interp = concatMap interpolate . fixBothBeatDev where
 
   -- splits a 'Timed [BBChord]' into multiple instances interpolating
   -- the off an onsets by evenly dividing the time for every beat.
   interpolate :: Timed [BBChord] -> [Timed BBChord]
-  interpolate td = 
+  interpolate td =
     let on  = onset td
         off = offset td
         dat = getData td
@@ -327,122 +327,123 @@ interp = concatMap interpolate . fixBothBeatDev where
 -- 'fixForward' and 'fixBackward' both rely on 'fixOddLongBeats'
 fixForward, fixBackward, fixBothBeatDev :: [Timed [BBChord]] -> [Timed [BBChord]]
 fixBothBeatDev = fixBackward . fixForward
-fixForward     = fixOddLongBeats Forward 
+fixForward     = fixOddLongBeats Forward
                  acceptableBeatDeviationMultiplier
 fixBackward    = reverse . fixOddLongBeats Backward  -- = reversed fix Forward
                  acceptableBeatDeviationMultiplier . reverse
 
 data Direction = Forward | Backward
-    
+
 -- We discovered that the 'Billboard.Tests.oddBeatLengthTest' failed at quite
--- some songs. The reason of failure is often caused by the /silence/ 
--- timestamps at the beginning and end of a song. Probably, the annotators 
--- marked /silence/ when there was really not much to hear any more. 
--- This, however, is a problem: apparently there is a discrepancy between the 
--- last musical beat of a song and the actual silence that clearly distorts 
--- the 'interp'olation of the last line of annotated chords. Hence, we 
--- use a different kind of interpolation for this last line of chords. We use 
--- the average beat length of the previous line to predict the beat durations 
+-- some songs. The reason of failure is often caused by the /silence/
+-- timestamps at the beginning and end of a song. Probably, the annotators
+-- marked /silence/ when there was really not much to hear any more.
+-- This, however, is a problem: apparently there is a discrepancy between the
+-- last musical beat of a song and the actual silence that clearly distorts
+-- the 'interp'olation of the last line of annotated chords. Hence, we
+-- use a different kind of interpolation for this last line of chords. We use
+-- the average beat length of the previous line to predict the beat durations
 -- of the chords and fill the /gap/ between the last chord and the /silence/
 -- annotation with additional 'N' chords.
-fixOddLongBeats :: Direction -> Double -> [Timed [BBChord]] 
+fixOddLongBeats :: Direction -> NumData -> [Timed [BBChord]]
                 -> [Timed [BBChord]]
 fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ cs)  where
 
   -- separate the lines containing silence N chords at the beginning
   -- from the lines that contain musical chords
-  (sil,cs) = break (not . and . map (isNoneBBChord) . getData) song
-  -- precalculate the average beat length, filtering lines that contain 
+  (sil,cs) = span (all isNoneBBChord . getData) song
+  -- precalculate the average beat length, filtering lines that contain
   -- none harmonic data (in the from of N chords)
-  avgBt = avgBeatLens . filter (and . map (not . isNoneBBChord) . getData ) $ cs        
-  
+  avgBt = avgBeatLens . filter (all (not . isNoneBBChord) . getData ) $ cs
+
   -- Marks the start and beginning of the chords sequence
   markStartEnd :: Direction -> [Timed [BBChord]] -> [Timed [BBChord]]
   markStartEnd _        []         = []
   markStartEnd Forward  (fc : rst) = fmap markStart fc : rst
-  markStartEnd Backward (fc : rst) = fmap markEnd  fc : rst  
-  
+  markStartEnd Backward (fc : rst) = fmap markEnd  fc : rst
+
   -- does the actual marking
   markStart, markEnd :: [BBChord] -> [BBChord]
   markStart  [] = []
   markStart (h:t) = addStart (Anno Chords) h : t
   markEnd    [] = []
-  markEnd l = let (lst : rst) = reverse l 
+  markEnd l = let (lst : rst) = reverse l
               in reverse (addEnd (Anno Chords) lst : rst)
-  
+
   -- Fixes the distorted interpolation
   fixOddLongLine :: [Timed [BBChord]] -> [Timed [BBChord]]
-  fixOddLongLine (l : n : ls ) = 
+  fixOddLongLine (l : n : ls ) =
     case (avgBeatLen l >= ((1 + beatDev) * avgBt), dir) of
       (True, Forward ) -> fmap (replicateNone (avgBeatLen n) l ++) l : n : ls
       (True, Backward) -> fmap (++ replicateNone (avgBeatLen n) l) l : n : ls
       (False, _      ) ->                                          l : n : ls
   fixOddLongLine l             = l
-  
+
   -- fills the "gap" with none chords
-  replicateNone :: Double -> Timed [BBChord] -> [BBChord]
-  replicateNone prvBeat d = 
+  replicateNone :: NumData -> Timed [BBChord] -> [BBChord]
+  replicateNone prvBeat d =
     -- calculate the number of beats expected, minus the chords in the list
-    let nrN  = (round ((offset d - onset d) / prvBeat)) - (length . getData $ d) 
+    let nrN  = (round ((offset d - onset d) / prvBeat)) - (length . getData $ d)
         repN = noneBBChord {weight = Beat}
     -- annotate that this is an interpolated N list
-    in addLabel (Anno InterpolationInsert) 
+    in addLabel (Anno InterpolationInsert)
                 (noneBBChord : replicate (pred nrN) repN)
-  
+
   -- Calculates the average length of a beat in a list of Timed BBChords
-  avgBeatLens :: [Timed [BBChord]] -> Double
-  avgBeatLens l = (sum . map avgBeatLen $ l) / genericLength l 
-  
+  avgBeatLens :: [Timed [BBChord]] -> NumData
+  avgBeatLens l = (sum . map avgBeatLen $ l) / genericLength l
+
   -- Calculates the average length of a beat
-  avgBeatLen :: Timed [BBChord] -> Double
-  avgBeatLen td = (offset td - onset td) / genericLength (getData td)   
-    
+  avgBeatLen :: Timed [BBChord] -> NumData
+  avgBeatLen td = (offset td - onset td) / genericLength (getData td)
+
 --------------------------------------------------------------------------------
 -- Chord sequence data parsers
 --------------------------------------------------------------------------------
 
 -- Parses the /musical part/ of the Billboard data file by recursively parsing
 -- the lines of chords, silence, metre changes or modulations
-pChordLines :: TimeSig -> Parser [(Double, [BBChord])]
+pChordLines :: TimeSig -> Parser [(NumData, [BBChord])]
 pChordLines ts = do p <- pLine ts  -- parse one line
                     r <- case p of
                           -- if we parse chords, continue
                           (Left  t            ) -> concatLines t
-                          -- if we encounter a new global metre we use this 
+                          -- if we encounter a new global metre we use this
                           -- metre for the parsing the following chords
-                          (Right (Metre newTs)) -> pChordLines newTs 
+                          (Right (Metre newTs)) -> pChordLines newTs
                           -- we ignore modulations for now
                           (Right _            ) -> pChordLines ts
                     return r where
-  
+
   -- concatenates the parsed lines of chords recursively
-  concatLines :: (Double, [BBChord]) -> Parser [(Double, [BBChord])]
+  concatLines :: (NumData, [BBChord]) -> Parser [(NumData, [BBChord])]
   concatLines t = case isEnd . head . snd $ t of
                     True  -> (t :) <$> pure []        -- stop condition
                     False -> (t :) <$> pChordLines ts -- continue
 
 -- Parses one line which can be chords, meta information, or end/silence
-pLine :: TimeSig -> Parser (Either (Double, [BBChord]) Meta)         
+pLine :: TimeSig -> Parser (Either (NumData, [BBChord]) Meta)
 pLine ts = (pChordLine ts <|> pSilenceLine <|> pMetaChange) <* pLineEnd
 
 -- parses a line annotated with "silence"
-pSilenceLine :: Parser (Either (Double, [BBChord]) Meta) 
+pSilenceLine :: Parser (Either (NumData, [BBChord]) Meta)
 pSilenceLine = f <$> pDoubleRaw <* pSym '\t' <*> (pZSilence  <|> pSongEnd)
-  where f a b = Left (a,[b])
-  
+  where f :: Double -> a -> Either (NumData, [a]) Meta
+        f a b = Left (realToFrac a,[b])
+
 -- parses a line with annotated chord sequence data
-pChordLine :: TimeSig -> Parser (Either (Double, [BBChord]) Meta)
+pChordLine :: TimeSig -> Parser (Either (NumData, [BBChord]) Meta)
 pChordLine ts = Left <$> (setAnnotations <$> pDoubleRaw <* pSym '\t'
                                         <*> pStructStart
                                         <*> pChordSeq ts
                                         <*> pEndAnnotations)
-      
+
 -- merges the different forms information (annotations, beats, chords, time-
--- stamps) into a timestamped list of 'BBChord's 
-setAnnotations :: Double -> [Annotation] -> [BBChord] -> [Annotation] 
-               -> (Double, [BBChord])
+-- stamps) into a timestamped list of 'BBChord's
+setAnnotations :: NumData -> [Annotation] -> [BBChord] -> [Annotation]
+               -> (NumData, [BBChord])
 setAnnotations d _   [ ]    _   = (d, []) -- no chords, just a timestamp
-setAnnotations d srt chords end = 
+setAnnotations d srt chords end =
   (d, updateLast (mergeAnnos end'') (mergeAnnos srt' c : cs))
 
   where -- put the 'starting annotations' at the beginning
@@ -455,40 +456,40 @@ setAnnotations d srt chords end =
              -- After all, it has been expanded and could only confuse users
              ([r], nr) -> (concat $ replicate (getRepeats r) chords, nr)
              ([ ], _ ) -> (chords, end')
-             _   -> error "Billboard.Billboardparser: multiple repeats found!" 
+             _   -> error "Billboard.Billboardparser: multiple repeats found!"
 
--- Recognises the "Z" character, and several silence annotations. If silence 
+-- Recognises the "Z" character, and several silence annotations. If silence
 -- (see pSilence) is explicitly annotated the annotation is also stored in the
--- outputted N chord label.   
-pZSilence :: Parser BBChord  
-pZSilence = endChord <$> 
+-- outputted N chord label.
+pZSilence :: Parser BBChord
+pZSilence = endChord <$>
       ((pString "Z" <* pPrimes) *> pMaybe (pString ", " *> pSilence)
       <|> Just <$> pSilence) where
   -- if there are silence annotations add them to a N chord
   endChord :: Maybe Label -> BBChord
-  endChord = maybe noneC ((flip addStartEnd) noneC)  
-  
+  endChord = maybe noneC ((flip addStartEnd) noneC)
+
   noneC = addStart (Struct 'Z' 0) noneBBChord
-  
+
   -- recognises a "silence" annotation, no chords are sounding
   pSilence :: Parser Label
-  pSilence = Anno <$> (Silence    <$ pString "silence" 
+  pSilence = Anno <$> (Silence    <$ pString "silence"
                   <|>  Noise      <$ pString "noise"
                   <|>  Applause   <$ pString "applause"
-                  <|>  TalkingEnd <$ pString "talking" 
-                  <|>  Fadeout    <$ pString "fadeout" 
-                  <|>  PreIntro   <$ pString "pre" <* pMabSpcDsh  
+                  <|>  TalkingEnd <$ pString "talking"
+                  <|>  Fadeout    <$ pString "fadeout"
+                  <|>  PreIntro   <$ pString "pre" <* pMabSpcDsh
                                                    <* pString "intro")
-                                                    
+
 -- parses the end of a song
 pSongEnd :: Parser BBChord
 pSongEnd = (flip addEnd) noneBBChord <$> ((Anno SongEnd) <$ pString "end")
 
--- recognises a chord sequence like: 
+-- recognises a chord sequence like:
 -- "| Db:maj Gb:maj/5 | Ab:maj Db:maj/5 | Bb:min Bb:min/b7 Gb:maj . | Ab:maj |\"
 pChordSeq :: TimeSig -> Parser [BBChord]
-pChordSeq ts = setWeight . concat <$> (pSym '|' 
-                                   *> pList1Sep_ng (pString "|") (pBar ts) 
+pChordSeq ts = setWeight . concat <$> (pSym '|'
+                                   *> pList1Sep_ng (pString "|") (pBar ts)
                                   <*  pSym '|') where
   -- Log the start of a line (which generally marks the start of a phrase) as
   -- a "metrical weight", which is used in printing the sequence to the user.
@@ -499,35 +500,35 @@ pChordSeq ts = setWeight . concat <$> (pSym '|'
 -- In a bar we can encounter chords and optionally we can also encounter an
 -- additional time signature description
 pBar :: TimeSig -> Parser [BBChord]
-pBar ts = markBarStart <$> (updateRep <$> (pSym ' ' 
+pBar ts = markBarStart <$> (updateRep <$> (pSym ' '
                                        *> (pParens pTimeSig `opt` ts))
                                       <*> pBarChords)
 
 -- parses the chords within one bar
-pBarChords :: Parser [BBChord] 
+pBarChords :: Parser [BBChord]
 pBarChords = pList1Sep_ng (pSym ' ') (pBBChord <|> pRepChord) <* pSym ' '
 
 -- marks the start of a bar by setting the beat weight field to 'Bar'
 markBarStart :: [BBChord] -> [BBChord]
 markBarStart []    = []
 markBarStart (h:t) = h {weight = Bar} : t
-  
+
 -- within a bar there can be one chord, two chords (representing the sounding
--- chord in the first and second halve of the bar), multiple chords, and 
+-- chord in the first and second halve of the bar), multiple chords, and
 -- repetitions marked with a '.'
 updateRep :: TimeSig -> [BBChord] -> [BBChord]
 updateRep _  [ ]      = error "updateRep: no chords to update"
 updateRep ts [c]      = replChord (tatumsPerBar ts) c          -- one chord
 updateRep ts [c1, c2] = let t = (tatumsPerBar ts) `div` 2      -- two chords
-                        in  replChord t c1 ++ replChord t c2    
+                        in  replChord t c1 ++ replChord t c2
 updateRep ts cs       = update cs                             -- multiple chords
   -- updates the repetited chords ('.')
   where update :: [BBChord] -> [BBChord]
         update [ ]    = [ ]
         update [x]    = replChord (chordsPerDot ts) x
         update (x:y:xs) = case weight y of
-          -- Because at parsing time we do not know which chord is repeated 
-          -- by a '.' we replace the chord in the 'BBChord' by the previous 
+          -- Because at parsing time we do not know which chord is repeated
+          -- by a '.' we replace the chord in the 'BBChord' by the previous
           -- chord (at parsing time a None chord is stored in the BBchord)
           Beat   -> replChord (chordsPerDot ts) x ++ update (y {chord = chord x}: xs)
           Change -> replChord (chordsPerDot ts) x ++ update (y : xs)
@@ -566,8 +567,8 @@ pOptWrapPar s = pSym '(' *> pString s <* pSym ')' <|> pString s
 pReadableStr :: Parser String
 pReadableStr = pList1 pReadableSym
 
--- accepts a 'Char' in the range of:  
--- !\"#$%&'()  
+-- accepts a 'Char' in the range of:
+-- !\"#$%&'()
 -- ,-./0123456789:;
 -- ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz
 pReadableSym :: Parser Char
@@ -586,4 +587,3 @@ tuple a b = (a,b)
 
 list :: a -> [a]
 list a = [a]
-
