@@ -29,7 +29,7 @@ import Text.ParserCombinators.UU
 import HarmTrace.Base.Parse.General  hiding ( pLineEnd )
 import HarmTrace.Base.Parse.ChordParser     ( pRoot, pChord )
 import HarmTrace.Base.Chord
-import HarmTrace.Base.Time            ( Timed (..), timed, timeComp, NumData
+import HarmTrace.Base.Time            ( Timed, Timed' (..), timed, timeComp
                                       , BeatTime (..), onset, offset )
 
 import Billboard.BeatBar              ( TimeSig  (..), BeatWeight (..)
@@ -46,7 +46,7 @@ import Billboard.Internal             ( updateLast )
 
 -- | A parameter that sets the acceptable beat deviation multiplier, which
 -- controls when exceptionally long beat lengths will be interpolated.
-acceptableBeatDeviationMultiplier :: NumData
+acceptableBeatDeviationMultiplier :: Float
 acceptableBeatDeviationMultiplier = 0.075
 
 --------------------------------------------------------------------------------
@@ -279,15 +279,15 @@ pUnknownInstr :: Parser Instrument
 pUnknownInstr = UnknownInstr <$> pList1 pLower
 
 -- a parser that recognises either a metre change or a modulation
-pMetaChange :: Parser  (Either (NumData, [BBChord]) Meta)
+pMetaChange :: Parser  (Either (Float, [BBChord]) Meta)
 pMetaChange = pModulation <|> pMetreChange
 
 -- recongises a modulation and returns the new tonic
-pModulation :: Parser (Either (NumData, [BBChord]) Meta)
+pModulation :: Parser (Either (Float, [BBChord]) Meta)
 pModulation = Right <$> (pMetaPrefix *> pKeyRoot)
 
 -- recongises a metre change and returns the new time signature
-pMetreChange :: Parser (Either (NumData, [BBChord]) Meta)
+pMetreChange :: Parser (Either (Float, [BBChord]) Meta)
 pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 
 --------------------------------------------------------------------------------
@@ -300,7 +300,7 @@ pChordLinesPost ts = (interp . setTiming) <$> pChordLines ts
 
 -- labels every line with the corresponding starting and ending times (where
 -- the end time is actually the start time of the next chord line)
-setTiming :: [(NumData, a)] -> [Timed a]
+setTiming :: [(Float, a)] -> [Timed a]
 setTiming [ ] = []
 setTiming [_] = [] -- remove the end
 setTiming (a : b : cs) = Timed (snd a) [Time (fst a), Time (fst b)]
@@ -345,7 +345,7 @@ data Direction = Forward | Backward
 -- the average beat length of the previous line to predict the beat durations
 -- of the chords and fill the /gap/ between the last chord and the /silence/
 -- annotation with additional 'N' chords.
-fixOddLongBeats :: Direction -> NumData -> [Timed [BBChord]]
+fixOddLongBeats :: Direction -> Float -> [Timed [BBChord]]
                 -> [Timed [BBChord]]
 fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ cs)  where
 
@@ -380,7 +380,7 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
   fixOddLongLine l             = l
 
   -- fills the "gap" with none chords
-  replicateNone :: NumData -> Timed [BBChord] -> [BBChord]
+  replicateNone :: Float -> Timed [BBChord] -> [BBChord]
   replicateNone prvBeat d =
     -- calculate the number of beats expected, minus the chords in the list
     let nrN  = (round ((offset d - onset d) / prvBeat)) - (length . getData $ d)
@@ -390,11 +390,11 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
                 (noneBBChord : replicate (pred nrN) repN)
 
   -- Calculates the average length of a beat in a list of Timed BBChords
-  avgBeatLens :: [Timed [BBChord]] -> NumData
+  avgBeatLens :: [Timed [BBChord]] -> Float
   avgBeatLens l = (sum . map avgBeatLen $ l) / genericLength l
 
   -- Calculates the average length of a beat
-  avgBeatLen :: Timed [BBChord] -> NumData
+  avgBeatLen :: Timed [BBChord] -> Float
   avgBeatLen td = (offset td - onset td) / genericLength (getData td)
 
 --------------------------------------------------------------------------------
@@ -403,7 +403,7 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
 
 -- Parses the /musical part/ of the Billboard data file by recursively parsing
 -- the lines of chords, silence, metre changes or modulations
-pChordLines :: TimeSig -> Parser [(NumData, [BBChord])]
+pChordLines :: TimeSig -> Parser [(Float, [BBChord])]
 pChordLines ts = do p <- pLine ts  -- parse one line
                     r <- case p of
                           -- if we parse chords, continue
@@ -416,23 +416,23 @@ pChordLines ts = do p <- pLine ts  -- parse one line
                     return r where
 
   -- concatenates the parsed lines of chords recursively
-  concatLines :: (NumData, [BBChord]) -> Parser [(NumData, [BBChord])]
+  concatLines :: (Float, [BBChord]) -> Parser [(Float, [BBChord])]
   concatLines t = case isEnd . head . snd $ t of
                     True  -> (t :) <$> pure []        -- stop condition
                     False -> (t :) <$> pChordLines ts -- continue
 
 -- Parses one line which can be chords, meta information, or end/silence
-pLine :: TimeSig -> Parser (Either (NumData, [BBChord]) Meta)
+pLine :: TimeSig -> Parser (Either (Float, [BBChord]) Meta)
 pLine ts = (pChordLine ts <|> pSilenceLine <|> pMetaChange) <* pLineEnd
 
 -- parses a line annotated with "silence"
-pSilenceLine :: Parser (Either (NumData, [BBChord]) Meta)
+pSilenceLine :: Parser (Either (Float, [BBChord]) Meta)
 pSilenceLine = f <$> pDoubleRaw <* pSym '\t' <*> (pZSilence  <|> pSongEnd)
-  where f :: Double -> a -> Either (NumData, [a]) Meta
+  where f :: Double -> a -> Either (Float, [a]) Meta
         f a b = Left (realToFrac a,[b])
 
 -- parses a line with annotated chord sequence data
-pChordLine :: TimeSig -> Parser (Either (NumData, [BBChord]) Meta)
+pChordLine :: TimeSig -> Parser (Either (Float, [BBChord]) Meta)
 pChordLine ts = Left <$> (setAnnotations <$> pDoubleRaw <* pSym '\t'
                                         <*> pStructStart
                                         <*> pChordSeq ts
@@ -440,8 +440,8 @@ pChordLine ts = Left <$> (setAnnotations <$> pDoubleRaw <* pSym '\t'
 
 -- merges the different forms information (annotations, beats, chords, time-
 -- stamps) into a timestamped list of 'BBChord's
-setAnnotations :: NumData -> [Annotation] -> [BBChord] -> [Annotation]
-               -> (NumData, [BBChord])
+setAnnotations :: Float -> [Annotation] -> [BBChord] -> [Annotation]
+               -> (Float, [BBChord])
 setAnnotations d _   [ ]    _   = (d, []) -- no chords, just a timestamp
 setAnnotations d srt chords end =
   (d, updateLast (mergeAnnos end'') (mergeAnnos srt' c : cs))

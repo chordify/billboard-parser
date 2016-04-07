@@ -27,7 +27,7 @@ import Billboard.Tests            ( mainTestFile, mainTestDir, rangeTest
 import Billboard.IOUtils
 
 -- harmtrace imports
-import HarmTrace.Base.Time        ( Timed (..), dropTimed, NumData )
+import HarmTrace.Base.Time        ( Timed (..), dropTimed )
 
 -- other libraries
 import System.Console.ParseArgs
@@ -235,12 +235,12 @@ runResults d = do let ths = [0.05, 0.075, 0.1, 0.15, 0.25]
                   putStrLn $ intercalate "\t" ("File" : map show ths)
                   getBBFiles d >>= mapM_ (getResult ths)
   where
-    getResult :: [NumData] -> (FilePath, Int) -> IO [NumData]
+    getResult :: [Float] -> (FilePath, Int) -> IO [Float]
     getResult ths (fp, _) = do inp <- readFile fp
                                    >>= return . getSong . fst . parseBillboard
                                let r = map (offRatio inp) ths
                                putStrLn $ intercalate "\t" (fp : map show r)
                                return r
 
-    offRatio :: [Timed BBChord] -> NumData -> NumData
+    offRatio :: [Timed BBChord] -> Float -> Float
     offRatio td th = genericLength (getOffBeats th td) / genericLength td

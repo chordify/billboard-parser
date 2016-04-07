@@ -1,5 +1,5 @@
 name:                billboard-parser
-version:             1.1.0.2
+version:             1.2.0.0
 synopsis:            A parser for the Billboard chord dataset
 description:         We present a parser for the world famous Billboard dataset
                      containing the chord transcriptions of over 1000
@@ -39,7 +39,7 @@ library
                        ListLike >=3.1,
                        HUnit ==1.2.*,
                        -- mtl ==2.1.*,
-                       HarmTrace-Base == 1.4.1.*
+                       HarmTrace-Base >= 1.5
 
   exposed-modules:     Billboard.Annotation
                        Billboard.BeatBar
@@ -64,7 +64,7 @@ executable billboard-parser
                        ListLike >=3.1,
                        HUnit ==1.2.*,
                        -- mtl ==2.1.*,
-                       HarmTrace-Base == 1.4.1.*
+                       HarmTrace-Base >= 1.5
 
   ghc-options:         -Wall
                        -O2

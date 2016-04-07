@@ -9,17 +9,17 @@
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
--- Summary: A set of datatypes for representing Billboard chord sequence data 
--- See: John Ashley Burgoyne, Jonathan Wild, Ichiro Fujinaga, 
+-- Summary: A set of datatypes for representing Billboard chord sequence data
+-- See: John Ashley Burgoyne, Jonathan Wild, Ichiro Fujinaga,
 -- /An Expert Ground-Truth Set for Audio Chord Recognition and Music Analysis/,
 -- In: Proceedings of International Conference on Music Information Retrieval,
--- 2011. (<http://ismir2011.ismir.net/papers/OS8-1.pdf>) 
+-- 2011. (<http://ismir2011.ismir.net/papers/OS8-1.pdf>)
 --------------------------------------------------------------------------------
 
 module Billboard.BillboardData ( -- * The BillBoard data representation
                                  BillboardData (..)
                                , Meta (..)
-                               , BBChord (..)                               
+                               , BBChord (..)
                                , Artist
                                , Title
                                , noneBBChord
@@ -51,7 +51,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
 
 -- HarmTrace stuff
 import HarmTrace.Base.Chord
-import HarmTrace.Base.Time     ( Timed (..), timedBT, getData
+import HarmTrace.Base.Time     ( Timed, Timed' (..), timedBT, getData
                                 , onset, offset, concatTimed )
 
 import Billboard.BeatBar
@@ -64,24 +64,24 @@ import Data.List                ( partition, sort )
 
 -- | The 'BillboardData' datatype stores all information that has been extracted
 -- from a Billboard chord annotation
-data BillboardData = BillboardData { getTitle   :: Title    
-                                   , getArtist  :: Artist 
-                                   , getTimeSig :: TimeSig 
-                                   , getKeyRoot :: Root    
+data BillboardData = BillboardData { getTitle   :: Title
+                                   , getArtist  :: Artist
+                                   , getTimeSig :: TimeSig
+                                   , getKeyRoot :: Root
                                    , getSong    :: [Timed BBChord]
                                    } deriving Show
 
 -- | Represents the artists of the piece
-type Artist = String 
+type Artist = String
 -- | Represents the title of the piece
-type Title  = String  
--- | Represents other metadata of the piece, i.e. the time signature 
+type Title  = String
+-- | Represents other metadata of the piece, i.e. the time signature
 -- and key root
-data Meta   = Metre   TimeSig 
+data Meta   = Metre   TimeSig
             | KeyRoot Root    deriving Show
 
 
--- | We wrap the 'HarmTrace.Base.MusicRep.Chord' datatype into a 'BBChord' type, 
+-- | We wrap the 'HarmTrace.Base.MusicRep.Chord' datatype into a 'BBChord' type,
 -- so that we can augment it with 'Annotation's and 'BeatWeight's.
 data BBChord = BBChord { annotations :: [Annotation]
                        , weight      :: BeatWeight
@@ -99,25 +99,25 @@ noneBBChord = BBChord [] Change NoChord
 -- | Returns True if the 'BBChord' represents a starting point of a structural
 -- segment
 isStructSegStart :: BBChord -> Bool-- look for segTypes that are Start and Struct
-isStructSegStart = not . null . filter isStruct . map getLabel 
-                              . filter isStart  . annotations 
+isStructSegStart = not . null . filter isStruct . map getLabel
+                              . filter isStart  . annotations
 
--- | Returns True if the 'BBChord' represents a chord Change (must be set 
+-- | Returns True if the 'BBChord' represents a chord Change (must be set
 -- beforehand, only the 'BeatWeight' stored in the 'BBChord' is examined)
 isChange :: BBChord -> Bool
 isChange c = case weight c of
   Change    -> True
   UnAligned -> error "BBChord.isChange: the BBChord is not beat aligned"
   _         -> False
-  
--- | Returns True if the 'BBChord' is a 'noneBBChord', i.e. has not root note 
+
+-- | Returns True if the 'BBChord' is a 'noneBBChord', i.e. has not root note
 -- and no shorthand
 isNoneBBChord :: BBChord -> Bool
 isNoneBBChord = isNoneChord . chord
 
 -- | Returns True if this 'BBChord' is the last (N) chord of the song
 isEnd :: BBChord -> Bool
-isEnd c = isNoneBBChord c && hasAnnotation isEndAnno c 
+isEnd c = isNoneBBChord c && hasAnnotation isEndAnno c
 
 -- | Returns True if the 'BBChord' has any 'Annotations's and False otherwise
 hasAnnotations :: BBChord -> Bool
@@ -127,8 +127,8 @@ hasAnnotations = not . null . annotations
 hasAnnotation :: (Annotation -> Bool) -> BBChord -> Bool
 hasAnnotation f c = case annotations c of
   [] -> False
-  a  -> or . map f $ a
-  
+  a  -> any f $ a
+
 -- adds 'Annotation's to a 'BBChord' (and sorts the annotations)
 mergeAnnos :: [Annotation] -> BBChord -> BBChord
 mergeAnnos b a = a { annotations = sort (annotations a ++ b) }
@@ -169,17 +169,17 @@ getBBChordsNoSilence = removeSilence . getBBChords where
   -- beginning and end of a piece
   removeSilence :: [BBChord] -> [BBChord]
   removeSilence = takeIncl  (not . hasAnnotation isLastChord ) .
-                  dropWhile (not . hasAnnotation isFirstChord) 
-                  
+                  dropWhile (not . hasAnnotation isFirstChord)
+
   -- Does exactly the same as 'takeWhile' but includes the element for which
   -- the predicate holds. For example takeIncl (< 3) [1..5] = [1, 2, 3]
   takeIncl :: (a -> Bool) -> [a] -> [a]
   takeIncl _ []     = [ ]
-  takeIncl p (x:xs) 
+  takeIncl p (x:xs)
      | p x          =  x : takeIncl p xs
      | otherwise    = [x]
 
--- | Returns the structural segmentation 'Annotation's, 
+-- | Returns the structural segmentation 'Annotation's,
 -- given a 'BBChord'
 getStructAnn :: BBChord -> [Annotation]
 getStructAnn = filter ( isStruct . getLabel ) . annotations
@@ -188,25 +188,25 @@ getStructAnn = filter ( isStruct . getLabel ) . annotations
 -- Utilities
 --------------------------------------------------------------------------------
 
--- | the inverse of 'reduceTimedBBChords', expanding a chord to it original 
+-- | the inverse of 'reduceTimedBBChords', expanding a chord to it original
 -- representation
 expandTimedBBChords :: [Timed BBChord] -> [Timed BBChord]
 expandTimedBBChords = concatMap replic where
 
   replic :: Timed BBChord -> [Timed BBChord]
-  replic (Timed c ts) = 
+  replic (Timed c ts) =
     let (s,e) = partition isStart (annotations c)
         reps = repeat c { weight = Beat, annotations = [] }
-        
-    in  updateLast (fmap (mergeAnnos e))
-      $ zipWith3 timedBT (c { annotations = s } : reps) ts (tail ts)
 
--- | The inverse function of 'expandTimedBBChords': given a list of 
--- 'Timed BBChords', all subsequent /x/ 'BBChords' with the same 
--- label are grouped into one 'Timed BBChord'. N.B. 
+    in  updateLast (fmap (mergeAnnos e))
+      $ zipWith3 timedBT (c { annotations = s } : reps) ts (tail ts) :: [Timed BBChord]
+
+-- | The inverse function of 'expandTimedBBChords': given a list of
+-- 'Timed BBChords', all subsequent /x/ 'BBChords' with the same
+-- label are grouped into one 'Timed BBChord'. N.B.
 --
 -- >>> expandTimedBBChords (reduceTimedBBChords cs) = cs :: [Timed BBChord]
--- 
+--
 -- also,
 --
 -- >>> (expandTimedBBChords cs) = cs
@@ -227,25 +227,25 @@ reduceTimedBBChords = foldr groupT [] where
 
 
 -- keep groupBBChord and expandChordDur "inverseable" we use a more strict
--- 'BBChord' equality  
+-- 'BBChord' equality
 bbChordEq :: BBChord -> BBChord -> Bool
-bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) = 
+bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
   cA   ==      cB  &&    -- as of HarmTrace-Base-1.4 we have derive chord Eq
   anA `annEq`  anB &&
   btA `beatEq` btB where
-  
+
     annEq :: [Annotation] -> [Annotation] -> Bool
     -- annEq [] [] = True
     annEq _  [] = True
     annEq _  e  = onlyEndAnns e
     -- annEq a  b  = a == b
-    
+
     -- returns True if the Annotations are only of the 'End' type or empty
     onlyEndAnns :: [Annotation] -> Bool
     onlyEndAnns []    = True
     onlyEndAnns (h:t) = not (isStart h) && onlyEndAnns t
-    
-    beatEq :: BeatWeight -> BeatWeight -> Bool  
+
+    beatEq :: BeatWeight -> BeatWeight -> Bool
     beatEq LineStart Beat       = True
     beatEq Bar       Beat       = True
     beatEq Change    Beat       = True
@@ -259,33 +259,33 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
 
 -- | Shows the data (almost) as derived automatically
 showDebugChord ::([Timed BBChord] -> [Timed BBChord]) -> BillboardData -> String
-showDebugChord redf = concatMap (showLine show) . redf . getSong 
+showDebugChord redf = concatMap (showLine show) . redf . getSong
 
 -- | Shows the chord sequence in the 'BillboardData'
 showFullChord :: ([Timed BBChord] -> [Timed BBChord]) -> BillboardData -> String
-showFullChord redf = concatMap (showLine (show . chord)) . redf . getSong 
+showFullChord redf = concatMap (showLine (show . chord)) . redf . getSong
 
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions
 showInMIREXFormat ::([Timed BBChord]->[Timed BBChord])-> BillboardData -> String
-showInMIREXFormat redf = concatMap (showLine mirexBBChord) . redf . getSong 
+showInMIREXFormat redf = concatMap (showLine mirexBBChord) . redf . getSong
 
--- | Shows a 'Timed' 'BBChord' in MIREX triadic format, using only :maj, 
--- :min, :aug, :dim, sus2, sus4, and ignoring all chord additions 
+-- | Shows a 'Timed' 'BBChord' in MIREX triadic format, using only :maj,
+-- :min, :aug, :dim, sus2, sus4, and ignoring all chord additions
 showLine ::  (BBChord -> String) -> Timed BBChord ->  String
-showLine shwf c = show (onset c) ++ '\t' :  show (offset c) 
-                                 ++ '\t' : (shwf . getData $ c) ++ "\n" 
+showLine shwf c = show (onset c) ++ '\t' :  show (offset c)
+                                 ++ '\t' : (shwf . getData $ c) ++ "\n"
 
 -- | Shows a 'BBChord' in a way that resembles the original Billboard data
 showAsOriginal :: BBChord -> String
 showAsOriginal (BBChord [] Beat  _c) = show Beat
 showAsOriginal (BBChord bd Beat  _c) = show Beat ++ show bd
-showAsOriginal (BBChord [] w      c) = show w ++ ' ' : show c 
+showAsOriginal (BBChord [] w      c) = show w ++ ' ' : show c
 showAsOriginal (BBChord bd w      c) = let (srt, end) = partition isStart bd
-                                       in  show w ++ concatMap show srt 
-                                                  ++ ' ' : show c 
+                                       in  show w ++ concatMap show srt
+                                                  ++ ' ' : show c
                                                   ++ ' ' : concatMap show end
-                     
+
 -- Categorises a chord as Major or Minor and shows it in Harte et al. syntax
 mirexBBChord :: BBChord -> String
 mirexBBChord bbc = case chord bbc of
