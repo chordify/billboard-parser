@@ -15,6 +15,7 @@
 module Billboard.BeatBar ( TimeSig (..)
                          , BeatWeight (..)
                          , beatWeight
+                         , toMeterKind
                          , tatumsPerBar
                          , chordsPerDot ) where
 
@@ -22,22 +23,24 @@ module Billboard.BeatBar ( TimeSig (..)
 -- Modelling Beat and Bar structures (for chord sequences)
 --------------------------------------------------------------------------------
 
+import HarmTrace.Base.Time ( Beat (..), MeterKind (..) )
+
 -- TODO explain Change: perhaps this should be separated
 -- | Barlines can have different weights. Among other applications, this is used
 -- in the printing of chord sequences.
-data BeatWeight = UnAligned | Beat | Change | Bar | Bar4 | Bar8 
+data BeatWeight = UnAligned | Beat | Change | Bar | Bar4 | Bar8
                 | Bar16 | LineStart
-       deriving (Eq, Ord, Enum) 
+       deriving (Eq, Ord, Enum)
 
 instance Show BeatWeight where
-  show UnAligned = "" 
-  show Change    = "" 
-  show Beat      = "." 
-  show Bar       = "|" 
-  show Bar4      = "|\n|" 
-  show Bar8      = "|\n|" 
-  show Bar16     = "|\n|" 
-  show LineStart = "|\n|" 
+  show UnAligned = ""
+  show Change    = ""
+  show Beat      = "."
+  show Bar       = "|"
+  show Bar4      = "|\n|"
+  show Bar8      = "|\n|"
+  show Bar16     = "|\n|"
+  show LineStart = "|\n|"
 
 -- | Model a time signature as a fraction
 newtype TimeSig = TimeSig {timeSig :: (Int, Int)} deriving (Eq)
@@ -45,8 +48,8 @@ newtype TimeSig = TimeSig {timeSig :: (Int, Int)} deriving (Eq)
 instance Show TimeSig where
   show (TimeSig (num, denom)) = show num ++ '/' : show denom
 
--- | Defines the "metrical weight of a bar". A regular beat has strength 0, 
--- a bar has strength 1, a bar after 4 bars 2, a bar after 8 bars 3, and a bar 
+-- | Defines the "metrical weight of a bar". A regular beat has strength 0,
+-- a bar has strength 1, a bar after 4 bars 2, a bar after 8 bars 3, and a bar
 -- after 16 bars 4.
 beatWeight :: TimeSig -> Int -> BeatWeight
 beatWeight ts pos = let tatum = tatumsPerBar ts in
@@ -55,13 +58,20 @@ beatWeight ts pos = let tatum = tatumsPerBar ts in
     (0,0,0,_) -> Bar8  -- a bar @ eight measures
     (0,0,_,_) -> Bar4  -- a bar @ four measures
     (0,_,_,_) -> Bar   -- a bar position
-    _         -> Beat  -- a regular beat position, weight 0 
-    
+    _         -> Beat  -- a regular beat position, weight 0
 
+toMeterKind :: TimeSig -> Maybe MeterKind
+toMeterKind ts = case timeSig ts of
+                   (4,4) -> Just Duple
+                   (3,4) -> Just Triple
+                   (6,8) -> Just Triple
+                   (2,4) -> Just Duple
+                   (2,2) -> Just Duple
+                   _     -> Nothing
 
 -- | Returns the number of 'tatums' in a bar which is different for time
 -- signatures. For example:
--- 
+--
 -- >>> tatumsPerBar (TimeSig (3 ,4))
 -- 6
 --
@@ -87,5 +97,3 @@ chordsPerDot ts = irregularMeterError ts "illegal denominator"
 
 irregularMeterError :: TimeSig -> String -> a
 irregularMeterError ts msg = error ("Irregular meter: " ++ show ts ++ ' ' : msg)
-
-

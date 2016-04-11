@@ -30,15 +30,19 @@ import HarmTrace.Base.Parse.General  hiding ( pLineEnd )
 import HarmTrace.Base.Parse.ChordParser     ( pRoot, pChord )
 import HarmTrace.Base.Chord
 import HarmTrace.Base.Time            ( Timed, Timed' (..), timed, timeComp
-                                      , BeatTime (..), onset, offset )
+                                      , BeatTime (..), onset, offset
+                                      , updateBeats, Beat (..))
 
 import Billboard.BeatBar              ( TimeSig  (..), BeatWeight (..)
-                                      , tatumsPerBar, chordsPerDot )
+                                      , tatumsPerBar, chordsPerDot
+                                      , toMeterKind )
 import Billboard.BillboardData
 import Billboard.Annotation           (  Annotation (..), Label (..)
                                       , Instrument (..), Description (..)
                                       , isStart, isRepeat, getRepeats )
 import Billboard.Internal             ( updateLast )
+
+import Debug.Trace
 
 --------------------------------------------------------------------------------
 -- Constants
@@ -296,8 +300,13 @@ pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 
 -- Top-level parser for parsing chords sequence lines an annotations
 pChordLinesPost :: TimeSig -> Parser [Timed BBChord]
-pChordLinesPost ts = (interp . setTiming) <$> pChordLines ts
+pChordLinesPost ts = (addBeats . interp . setTiming) <$> pChordLines ts
 
+  where addBeats cs = case toMeterKind ts of
+                        Just mk -> f $ updateBeats mk One cs
+                        Nothing -> cs
+
+        f x = traceShow x x
 -- labels every line with the corresponding starting and ending times (where
 -- the end time is actually the start time of the next chord line)
 setTiming :: [(Float, a)] -> [Timed a]
@@ -319,7 +328,7 @@ interp = concatMap interpolate . fixBothBeatDev where
         off = offset td
         dat = getData td
         bt  = (off - on) / genericLength dat
-        ts  = [on, (on + bt) .. ]
+        ts = [on, (on + bt) .. ]
     in  zipWith3 timed dat ts (tail ts)
 
 -- The beat deviation occurs both at the beginning and at the end of piece,

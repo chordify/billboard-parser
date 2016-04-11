@@ -45,6 +45,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
                                -- * Showing
                                , showInMIREXFormat
                                , showFullChord
+                               , showFullBeat
                                , showDebugChord
                                , showAsOriginal
                                ) where
@@ -52,7 +53,7 @@ module Billboard.BillboardData ( -- * The BillBoard data representation
 -- HarmTrace stuff
 import HarmTrace.Base.Chord
 import HarmTrace.Base.Time     ( Timed, Timed' (..), timedBT, getData
-                                , onset, offset, concatTimed )
+                                , onset, offset, concatTimed, onBeat )
 
 import Billboard.BeatBar
 import Billboard.Annotation     ( Annotation (..), isStart, isStruct
@@ -259,22 +260,30 @@ bbChordEq (BBChord anA btA cA) (BBChord anB btB cB) =
 
 -- | Shows the data (almost) as derived automatically
 showDebugChord ::([Timed BBChord] -> [Timed BBChord]) -> BillboardData -> String
-showDebugChord redf = concatMap (showLine show) . redf . getSong
+showDebugChord redf = concatMap (showLine '\t' show) . redf . getSong
 
 -- | Shows the chord sequence in the 'BillboardData'
 showFullChord :: ([Timed BBChord] -> [Timed BBChord]) -> BillboardData -> String
-showFullChord redf = concatMap (showLine (show . chord)) . redf . getSong
+showFullChord redf = concatMap (showLine '\t' (show . chord)) . redf . getSong
 
 -- | Shows the 'BillboardData' in MIREX format, using only :maj, :min, :aug,
 -- :dim, sus2, sus4, and ignoring all chord additions
 showInMIREXFormat ::([Timed BBChord]->[Timed BBChord])-> BillboardData -> String
-showInMIREXFormat redf = concatMap (showLine mirexBBChord) . redf . getSong
+showInMIREXFormat redf = concatMap (showLine '\t' mirexBBChord) . redf . getSong
+
+-- | Similar to 'showFullChord' but it appends the 'Beat' at the start of the
+-- line
+showFullBeat ::([Timed BBChord]->[Timed BBChord])-> BillboardData -> String
+showFullBeat redf = concatMap (showBeatLine ';' (show . chord)) . redf . getSong
+
+showBeatLine :: Char -> (BBChord -> String) -> Timed BBChord ->  String
+showBeatLine sep shwf c = show (onBeat c) ++ sep : showLine sep shwf c
 
 -- | Shows a 'Timed' 'BBChord' in MIREX triadic format, using only :maj,
 -- :min, :aug, :dim, sus2, sus4, and ignoring all chord additions
-showLine ::  (BBChord -> String) -> Timed BBChord ->  String
-showLine shwf c = show (onset c) ++ '\t' :  show (offset c)
-                                 ++ '\t' : (shwf . getData $ c) ++ "\n"
+showLine :: Char -> (BBChord -> String) -> Timed BBChord ->  String
+showLine sep shwf c = show (onset c) ++ sep :  show (offset c)
+                                     ++ sep : (shwf . getData $ c) ++ "\n"
 
 -- | Shows a 'BBChord' in a way that resembles the original Billboard data
 showAsOriginal :: BBChord -> String

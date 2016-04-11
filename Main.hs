@@ -20,19 +20,20 @@ module Main (main) where
 
 import Billboard.BillboardData    ( BBChord (..), showAsOriginal, showDebugChord
                                   , reduceTimedBBChords, BillboardData(..)
-                                  , showFullChord, showInMIREXFormat, getTitle)
+                                  , showFullChord, showInMIREXFormat, getTitle
+                                  , showFullBeat )
 import Billboard.BillboardParser  ( parseBillboard )
 import Billboard.Tests            ( mainTestFile, mainTestDir, rangeTest
                                   , oddBeatLengthTest, getOffBeats)
 import Billboard.IOUtils
 
 -- harmtrace imports
-import HarmTrace.Base.Time        ( Timed (..), dropTimed )
+import HarmTrace.Base.Time        ( Timed, dropTimed )
 
 -- other libraries
 import System.Console.ParseArgs
 import System.FilePath
-import Control.Monad              ( when, void )
+import Control.Monad              ( when, unless, void )
 import Text.Printf                ( printf )
 import Data.List                  ( genericLength, intercalate )
 
@@ -55,7 +56,7 @@ myArgs = [
                  argAbbr  = Just 'm',
                  argName  = Just "mode",
                  argData  = argDataRequired "mode" ArgtypeString,
-                 argDesc  = breakLn 53 "The billboard-parser features five modes ( parse | mirex | test | full | result | debug): With the first mode, parse, one or more pieces are parsed, and the piece is printed to the user in a way that resembles the original. If a piece cannot be parsed correctly, the parser will inform the user which part of the input could not be parsed, and where this occurred exactly in the file. The second mode, mirex, converts billboard pieces into the format typically used in MIREX evaluations: onset <space> offset <space> chordlabel. In MIREX mode, the chord labels are also truncated to the triad shorthands maj, min, dim, aug, sus2, and sus4; all additional chord extensions are removed. We truncate a chord by expanding it to its corresponding list of intervals, and analyse the components, if any, that are a second, third, fourth, or fifth above the root. The third mode, full, uses the same format as the mirex mode, but it prints the full chordlabel as found in the data. The fourth mode, test, executes a series of unit tests that flag chords with an unexpected duration. The mode result will output the results described in the technical report of this parser. Finally, debug, is verbose mode for debugging the parser."
+                 argDesc  = breakLn 53 "The billboard-parser features five modes ( parse | mirex | test | full | fullbeat | result | debug): With the first mode, parse, one or more pieces are parsed, and the piece is printed to the user in a way that resembles the original. If a piece cannot be parsed correctly, the parser will inform the user which part of the input could not be parsed, and where this occurred exactly in the file. The second mode, mirex, converts billboard pieces into the format typically used in MIREX evaluations: onset <space> offset <space> chordlabel. In MIREX mode, the chord labels are also truncated to the triad shorthands maj, min, dim, aug, sus2, and sus4; all additional chord extensions are removed. We truncate a chord by expanding it to its corresponding list of intervals, and analyse the components, if any, that are a second, third, fourth, or fifth above the root. The third mode, full, uses the same format as the mirex mode, but it prints the full chordlabel as found in the data. The fourth mode, test, executes a series of unit tests that flag chords with an unexpected duration. The mode result will output the results described in the technical report of this parser. Finally, debug, is verbose mode for debugging the parser."
                }
         ,  Arg { argIndex = OutDir,
                  argAbbr  = Just 'o',
@@ -111,7 +112,8 @@ breakLn l = intercalate ('\n' : replicate (79-l) ' ')
 
 
 -- representing the mode of operation
-data Mode = Mirex | Parse | Test | Full | Result | Debug deriving (Eq)
+data Mode = Mirex | Parse | Test | Full | FullBeat | Result | Debug
+              deriving (Eq)
 
 -- Run from CL
 main :: IO ()
@@ -119,6 +121,7 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
           -- check whether we have a usable mode
           let mode   = case (getRequiredArg arg ModeArg) of
                          "full"   -> Full
+                         "fullbeat" -> FullBeat
                          "mirex"  -> Mirex
                          "parse"  -> Parse
                          "test"   -> Test
@@ -152,6 +155,8 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
           case (mode, input) of
             (Full, Left  f)   -> showFile (showFullChord compf) f
             (Full, Right d)   -> void $ writeDir (showFullChord compf) oStr mout d
+            (FullBeat, Left  f)   -> showFile (showFullBeat compf) f
+            (FullBeat, Right d)   -> void $ writeDir (showFullBeat compf) oStr mout d
             (Mirex,  Left  f) -> showFile (showInMIREXFormat compf) f
             (Mirex,  Right d) -> void $ writeDir (showInMIREXFormat compf) oStr mout d
             (Debug,  Left  f) -> showFile (showDebugChord compf) f
@@ -188,7 +193,7 @@ parseDir :: FilePath -> IO ()
 parseDir d = void . bbMap oneSliceSalami $ d where
     -- parses a billboard file and presents the user with condensed output
     -- If parsing errors are encountered, they are printed
-    oneSliceSalami :: FilePath -> IO ([Timed BBChord])
+    oneSliceSalami :: FilePath -> IO [Timed BBChord]
     oneSliceSalami f =
       do inp <- readFile f
          let (bbd, err) = parseBillboard inp
@@ -196,7 +201,7 @@ parseDir d = void . bbMap oneSliceSalami $ d where
          putStrLn (getArtist bbd ++ ": " ++ getTitle bbd)
          putStrLn (d </> "salami_chords.txt, beats: " ++ show (length s)
                   ++ ", errors: "                     ++ show (length err))
-         when (not $ null err) (mapM_ print err)
+         unless (null err) (mapM_ print err)
          return s
 
 --------------------------------------------------------------------------------
@@ -225,7 +230,7 @@ writeDir shwf name mfp d = getBBFiles d >>= mapM toMirex where
                           -- place the output file in a specific folder (if set)
                           Just fp -> let str = maybe "%.4d_audio.lab" id name
                                      in  fp </>  printf str i
-       when (not $ null err) (error ("there were errors in file: " ++ f))
+       unless (null err) (error ("there were errors in file: " ++ f))
        writeFile out s
        putStrLn ("written file: " ++ out)
        return s
