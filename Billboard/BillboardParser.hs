@@ -43,8 +43,6 @@ import Billboard.Annotation           (  Annotation (..), Label (..)
                                       , isStart, isRepeat, getRepeats )
 import Billboard.Internal             ( updateLast )
 
-import Debug.Trace
-
 --------------------------------------------------------------------------------
 -- Constants
 --------------------------------------------------------------------------------
@@ -301,7 +299,7 @@ pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 
 -- Top-level parser for parsing chords sequence lines an annotations
 pChordLinesPost :: TimeSig -> Parser [Timed BBChord]
-pChordLinesPost ts = (interp . setTiming) <$> pChordLines ts
+pChordLinesPost ts = (interp ts . setTiming) <$> pChordLines ts
 
 -- labels every line with the corresponding starting and ending times (where
 -- the end time is actually the start time of the next chord line)
@@ -313,20 +311,22 @@ setTiming (a : b : cs) = Timed (snd a) [Time (fst a), Time (fst b)]
 
 -- interpolates the on- and offset for every 'BBChord' in a timestamped list
 -- of 'BBChord's
-interp :: [Timed [BBChord]] -> [Timed BBChord]
-interp = concatMap (interpolate Duple One) . fixBothBeatDev where
+interp ::TimeSig -> [Timed [BBChord]] -> [Timed BBChord]
+interp s = concatMap interpolate . fixBothBeatDev where
 
   -- splits a 'Timed [BBChord]' into multiple instances interpolating
   -- the off an onsets by evenly dividing the time for every beat.
-  interpolate :: MeterKind -> Beat -> Timed [BBChord] -> [Timed BBChord]
-  interpolate mk strt td =
+  interpolate :: Timed [BBChord] -> [Timed BBChord]
+  interpolate td =
     let on  = onset td
         off = offset td
         dat = getData td
         bt  = (off - on) / genericLength dat
         ts  = [on, (on + bt) .. ]
-        bts = zipWith BeatTime ts (iterate (nextBeat mk) strt)
-    in  zipWith3 timedBT dat bts (tail bts)
+    in case toMeterKind s of
+         Just mk -> let bts = zipWith BeatTime ts (iterate (nextBeat mk) One)
+                    in  zipWith3 timedBT dat bts (tail bts)
+         Nothing -> zipWith3 timed dat ts (tail ts)
 
 -- The beat deviation occurs both at the beginning and at the end of piece,
 -- but the principle of correction is exactly the same (but mirrored). Hence
