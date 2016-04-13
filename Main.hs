@@ -139,7 +139,7 @@ main = do arg <- parseArgsIO ArgsComplete myArgs
                         (Just "expand") -> id
                         (Just "red")    -> reduceTimedBBChords
                         (Just "reduce") -> reduceTimedBBChords
-                        _               -> reduceTimedBBChords
+                        _               -> id
 
           -- the input is either a file (Left) or a directory (Right)
           input  <-  case (inFile, inDir, bbid) of

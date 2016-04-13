@@ -30,8 +30,9 @@ import HarmTrace.Base.Parse.General  hiding ( pLineEnd )
 import HarmTrace.Base.Parse.ChordParser     ( pRoot, pChord )
 import HarmTrace.Base.Chord
 import HarmTrace.Base.Time            ( Timed, Timed' (..), timed, timeComp
-                                      , BeatTime (..), onset, offset
-                                      , updateBeats, Beat (..))
+                                      , timedBT, BeatTime (..), onset, offset
+                                      , nextBeat, Beat (..), onBeatTime
+                                      , MeterKind (..) )
 
 import Billboard.BeatBar              ( TimeSig  (..), BeatWeight (..)
                                       , tatumsPerBar, chordsPerDot
@@ -78,7 +79,7 @@ pBillboard = do (a, t, ts, r) <- pHeader
                    EQ -> x : h : t
                    -- in case of a rounding error, due to interpolation,
                    -- we replace the offset by the onset of then next chord
-                   _  -> timed (getData x) (onset x) (onset h) : h : t
+                   _  -> timedBT (getData x) (onBeatTime x) (onBeatTime h) : h : t
 
 --------------------------------------------------------------------------------
 -- parsing meta data in the headers
@@ -300,13 +301,8 @@ pMetreChange = Right <$> (pMetaPrefix *> pMetre)
 
 -- Top-level parser for parsing chords sequence lines an annotations
 pChordLinesPost :: TimeSig -> Parser [Timed BBChord]
-pChordLinesPost ts = (addBeats . interp . setTiming) <$> pChordLines ts
+pChordLinesPost ts = (interp . setTiming) <$> pChordLines ts
 
-  where addBeats cs = case toMeterKind ts of
-                        Just mk -> f $ updateBeats mk One cs
-                        Nothing -> cs
-
-        f x = traceShow x x
 -- labels every line with the corresponding starting and ending times (where
 -- the end time is actually the start time of the next chord line)
 setTiming :: [(Float, a)] -> [Timed a]
@@ -318,18 +314,19 @@ setTiming (a : b : cs) = Timed (snd a) [Time (fst a), Time (fst b)]
 -- interpolates the on- and offset for every 'BBChord' in a timestamped list
 -- of 'BBChord's
 interp :: [Timed [BBChord]] -> [Timed BBChord]
-interp = concatMap interpolate . fixBothBeatDev where
+interp = concatMap (interpolate Duple One) . fixBothBeatDev where
 
   -- splits a 'Timed [BBChord]' into multiple instances interpolating
   -- the off an onsets by evenly dividing the time for every beat.
-  interpolate :: Timed [BBChord] -> [Timed BBChord]
-  interpolate td =
+  interpolate :: MeterKind -> Beat -> Timed [BBChord] -> [Timed BBChord]
+  interpolate mk strt td =
     let on  = onset td
         off = offset td
         dat = getData td
         bt  = (off - on) / genericLength dat
-        ts = [on, (on + bt) .. ]
-    in  zipWith3 timed dat ts (tail ts)
+        ts  = [on, (on + bt) .. ]
+        bts = zipWith BeatTime ts (iterate (nextBeat mk) strt)
+    in  zipWith3 timedBT dat bts (tail bts)
 
 -- The beat deviation occurs both at the beginning and at the end of piece,
 -- but the principle of correction is exactly the same (but mirrored). Hence
