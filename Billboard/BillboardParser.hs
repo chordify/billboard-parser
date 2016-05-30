@@ -403,6 +403,15 @@ fixOddLongBeats dir beatDev song = sil ++ (fixOddLongLine . markStartEnd dir $ c
   avgBeatLen :: Timed [BBChord] -> Float
   avgBeatLen td = (offset td - onset td) / genericLength (getData td)
 
+
+-- | Add the found annotation to the next chord in the sequence
+addAnnotation :: Annotation -> Parser [(Float, [BBChord])] -> Parser [(Float, [BBChord])]
+addAnnotation a p = p >>= \r -> case r of
+  ((t,b:bs):ts) -> let b' = b { annotations = a : annotations b }
+                   in  return $ ((t,b':bs):ts)
+  -- Otherwise no chords found, so meta is dropped
+  _ -> return r
+
 --------------------------------------------------------------------------------
 -- Chord sequence data parsers
 --------------------------------------------------------------------------------
@@ -417,8 +426,9 @@ pChordLines ts = do p <- pLine ts  -- parse one line
                           -- if we encounter a new global metre we use this
                           -- metre for the parsing the following chords
                           (Right (Metre newTs)) -> pChordLines newTs
-                          -- we ignore modulations for now
-                          (Right _            ) -> pChordLines ts
+                          -- we found some other metadata, add it to the
+                          -- chord following this line
+                          (Right (KeyRoot key)) -> addAnnotation (Start $ Modulation key) $ pChordLines ts
                     return r where
 
   -- concatenates the parsed lines of chords recursively
