@@ -1,5 +1,5 @@
 name:                billboard-parser
-version:             1.2.0.0
+version:             1.2.1.0
 synopsis:            A parser for the Billboard chord dataset
 description:         We present a parser for the world famous Billboard dataset
                      containing the chord transcriptions of over 1000
